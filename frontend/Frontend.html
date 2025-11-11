@@ -1,27 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Frontend Page</title>
-    <link rel="stylesheet" href="styles.css">
-    <base href="http://localhost:8000/"> <!-- Base URL for assets -->
+    <link rel="stylesheet" href="styles.css" />
+    <base href="http://localhost:8000/" />
+    <!-- Base URL for assets -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-</head>
-<body>
+  </head>
+  <body>
     <main>
-        <section>
-            <h2>Dynamic Content Loading</h2>
-            <button hx-get="/fragment/card" hx-target="#content" hx-swap="innerHTML">
-                Load Content
-            </button>
-            <div id="content">
-                <p>Click the button to load content dynamically.</p>
-            </div>
-        </section>
+      <section>
+        <h2>Dynamic Content Loading</h2>
+        <button
+          hx-get="/fragment/card"
+          hx-target="#content"
+          hx-swap="innerHTML"
+        >
+          Load Content
+        </button>
+        <div id="content">
+          <p>Click the button to load content dynamically.</p>
+        </div>
+      </section>
     </main>
     <footer>
-        <p>&copy; 2024 Frontend Example</p>
+      <p>&copy; 2024 Frontend Example</p>
     </footer>
-</body>
+  </body>
 </html>
