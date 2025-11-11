@@ -1,6 +1,10 @@
 <div>
-  <h1>Configure ML model</h1>
+  <h2>Configure ML model</h2>
   <form id="model-form">
+    <div>
+      <h3>Upload CSV file</h3>
+      <input type="file" id="csv-file" accept=".csv" />
+    </div>
     <div>
       <h3>Select Model</h3>
       <select id="model-select">
@@ -9,5 +13,17 @@
         <option value="model_c">Model C</option>
       </select>
     </div>
+    <div>
+      <h3>Evaluation Settings</h3>
+      <div class="checkbox-group">
+        <input
+          type="checkbox"
+          id="confusion-matrix"
+          content="Toggle confusion matrix"
+        />
+        <label for="confusion-matrix">Show Confusion Matrix</label>
+      </div>
+    </div>
+    <button type="submit">Run Model</button>
   </form>
 </div>

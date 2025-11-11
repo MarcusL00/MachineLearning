@@ -9,16 +9,21 @@
     <title>CSVision</title>
   </head>
   <body>
+    <header>
+      <h1>CSVision</h1>
+    </header>
     <main>
       <section
         hx-get="partials/configure.html"
         hx-trigger="load"
         hx-target="this"
+        class="configuration"
       ></section>
       <section
         hx-get="partials/results.html"
         hx-trigger="load"
         hx-target="this"
+        class="results"
       ></section>
     </main>
     <footer>
