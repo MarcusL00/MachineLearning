@@ -1,0 +1,22 @@
+services:
+  csvision-web:
+    image: nginx:latest
+    ports:
+      - '80:80'
+    networks:
+      - CSVision_network
+    volumes:
+      - ../frontend:/usr/share/nginx/html
+
+  csvision-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - '8000:8000'
+    networks:
+      - CSVision_network
+
+networks:
+  CSVision_network:
+    driver: bridge
