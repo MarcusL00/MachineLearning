@@ -1,13 +1,20 @@
 <div>
   <h2>Configure ML model</h2>
-  <form id="model-form">
+  <form
+    id="model-form"
+    hx-post="/api/run-model"
+    hx-target="#results-container"
+    hx-swap="innerHTML"
+    enctype="multipart/form-data"
+    method="post"
+  >
     <div>
       <h3>Upload CSV file</h3>
-      <input type="file" id="csv-file" accept=".csv" />
+      <input type="file" id="csv-file" name="csv_file" accept=".csv" />
     </div>
     <div>
       <h3>Select Model</h3>
-      <select id="model-select">
+      <select id="model-select" name="model">
         <option value="model_a">Model A</option>
         <option value="model_b">Model B</option>
         <option value="model_c">Model C</option>
@@ -16,9 +23,12 @@
     <div>
       <h3>Evaluation Settings</h3>
       <div class="checkbox-group">
+        <input type="hidden" name="confusion_matrix" value="false" />
         <input
           type="checkbox"
           id="confusion-matrix"
+          name="confusion_matrix"
+          value="true"
           content="Toggle confusion matrix"
         />
         <label for="confusion-matrix">Show Confusion Matrix</label>
