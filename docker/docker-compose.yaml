@@ -2,11 +2,21 @@ services:
   csvision-web:
     image: nginx:latest
     ports:
-      - '80:80'
+      - '8080:80'
     networks:
       - CSVision_network
     volumes:
       - ../frontend:/usr/share/nginx/html
+
+  csvision-reverse-proxy:
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - '80:80'
+      - '443:443'
+    networks:
+      - CSVision_network
 
   csvision-api:
     build:
