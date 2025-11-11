@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Frontend Page</title>
     <link rel="stylesheet" href="styles.css">
-    <base href="http://localhost:8080/"> <!-- Base URL for assets -->
+    <base href="http://localhost:8000/"> <!-- Base URL for assets -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 <body>
     <main>
         <section>
             <h2>Dynamic Content Loading</h2>
-            <button hx-get="/load-content" hx-target="#content" hx-swap="innerHTML">
+            <button hx-get="/fragment/card" hx-target="#content" hx-swap="innerHTML">
                 Load Content
             </button>
             <div id="content">
