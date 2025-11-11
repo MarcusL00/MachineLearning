@@ -1,0 +1,81 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+header,
+footer {
+  text-align: center;
+  padding: 1rem;
+  background: var(--header-bg);
+  color: var(--header-text);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+footer p {
+  font-size: 0.9rem;
+  color: var(--header-text);
+}
+
+main {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  justify-content: space-evenly;
+  padding: 2rem;
+  gap: 2rem;
+  min-height: 90vh;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  justify-content: flex-start;
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  height: auto;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: var(--text-color);
+}
+
+form div {
+  margin-bottom: 1.5rem;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.green {
+  color: var(--primary-color);
+}
+
+p {
+  margin: 4px 0 8px 0;
+  color: var(--muted-text);
+  font-size: 0.9rem;
+}

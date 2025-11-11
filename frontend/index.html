@@ -3,14 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <link rel="stylesheet" href="styles.css" />
     <base href="http://localhost/" />
     <title>CSVision</title>
+
+    <!-- Loads required dependencies -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <!-- Loads styling -->
+    <link rel="stylesheet" href="styles/variables.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/loader.css" />
+    <link rel="stylesheet" href="styles/inputs.css" />
   </head>
   <body>
     <header>
-      <h1>CSVision</h1>
+      <h1><span class="green">CSV</span><span>ision</span></h1>
     </header>
     <main>
       <section
@@ -31,3 +39,6 @@
     </footer>
   </body>
 </html>
+
+<!-- Loads JavaScript -->
+<script src="/js/parseCsv.js"></script>

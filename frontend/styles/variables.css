@@ -1,0 +1,25 @@
+:root {
+  /* Header / footer */
+  --header-bg: #111827;
+  --header-text: #f9fafb;
+
+  /* Primary brand colors */
+  --primary-color: #10b981;
+  --primary-color-hover: #0e9f6e;
+  --primary-contrast: #ffffff;
+
+  /* Neutral / surfaces */
+  --background-color: #fbf9f3;
+  --surface: #ffffff;
+  --text-color: #111827;
+  --muted-text: #6b7280;
+  --border-color: #e6e9eb;
+
+  /* Accents / utility */
+  --accent-color: #374151;
+  --success: var(--primary-color);
+  --danger: #ef4444;
+
+  /* Shadows */
+  --shadow-color: rgba(2, 6, 23, 0.06);
+}

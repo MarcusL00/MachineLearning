@@ -1,8 +1,3 @@
-<head>
-  <!-- PapaParse (lightweight CSV parser) + inline script to populate selects from CSV headers -->
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
-</head>
-
 <div>
   <h2>Configure ML model</h2>
   <form
@@ -16,7 +11,7 @@
   >
     <div>
       <h3>Upload CSV file</h3>
-      <input type="file" id="csv-file" name="csv_file" accept=".csv" />
+      <input type="file" id="csv-file" name="csv_file" accept=".csv" required />
     </div>
     <div>
       <h3>Select Model</h3>
@@ -28,25 +23,22 @@
     </div>
     <div>
       <h3>Features</h3>
-      <p style="margin: 4px 0 8px 0; color: #6b7280; font-size: 0.9rem">
-        Select which columns to use as features (multiple allowed).
-      </p>
-      <select id="features-select" name="features[]" multiple disabled>
+      <p>Select which columns to use as features (multiple allowed).</p>
+      <select id="features-select" name="features[]" multiple disabled required>
         <!-- populated from CSV headers -->
       </select>
     </div>
     <div>
       <h3>Targets</h3>
-      <p style="margin: 4px 0 8px 0; color: #6b7280; font-size: 0.9rem">
-        Select which columns to use as targets (one or more).
-      </p>
-      <select id="targets-select" name="targets[]" multiple disabled>
+      <p>Select which columns to use as targets (one or more).</p>
+      <select id="targets-select" name="targets[]" multiple disabled required>
         <!-- populated from CSV headers -->
       </select>
     </div>
     <div>
       <h3>Seed</h3>
-      <input type="number" id="seed-input" name="seed" />
+      <p>Use -1 for random seed</p>
+      <input type="number" id="seed-input" name="seed" required value="-1" />
     </div>
     <div>
       <h3>Evaluation Settings</h3>
@@ -65,92 +57,3 @@
     <button type="submit">Run Model</button>
   </form>
 </div>
-
-<script>
-  ;(function () {
-    const fileInput = document.getElementById('csv-file')
-    const featuresSelect = document.getElementById('features-select')
-    const targetsSelect = document.getElementById('targets-select')
-
-    function clearOptions(select) {
-      while (select.options.length) select.remove(0)
-    }
-
-    function populateSelect(select, headers) {
-      clearOptions(select)
-      headers.forEach((h) => {
-        const opt = document.createElement('option')
-        opt.value = h
-        opt.text = h
-        select.appendChild(opt)
-      })
-      select.disabled = false
-    }
-
-    function extractHeadersFromCSV(file) {
-      return new Promise((resolve, reject) => {
-        if (!file) return resolve([])
-        // parse only first row using header:true and preview:1 to get fields
-        Papa.parse(file, {
-          header: true,
-          preview: 1,
-          skipEmptyLines: true,
-          dynamicTyping: false,
-          complete: function (results) {
-            const fields =
-              results.meta && results.meta.fields ? results.meta.fields : []
-            if (fields.length) return resolve(fields)
-            // fallback: try to read first line manually
-            Papa.parse(file, {
-              preview: 1,
-              skipEmptyLines: true,
-              complete: function (r2) {
-                if (r2.data && r2.data.length) {
-                  const row = r2.data[0]
-                  if (Array.isArray(row)) return resolve(row.map(String))
-                  // if parsed as object but no fields, extract keys
-                  return resolve(Object.keys(row))
-                }
-                resolve([])
-              },
-              error: function (err) {
-                reject(err)
-              },
-            })
-          },
-          error: function (err) {
-            reject(err)
-          },
-        })
-      })
-    }
-
-    fileInput.addEventListener('change', async function (e) {
-      const file = e.target.files && e.target.files[0]
-      if (!file) return
-      // disable selects while parsing
-      featuresSelect.disabled = true
-      targetsSelect.disabled = true
-      try {
-        const headers = await extractHeadersFromCSV(file)
-        if (!headers || headers.length === 0) {
-          clearOptions(featuresSelect)
-          clearOptions(targetsSelect)
-          const opt = document.createElement('option')
-          opt.text = '(No headers found)'
-          opt.disabled = true
-          featuresSelect.appendChild(opt)
-          const opt2 = document.createElement('option')
-          opt2.text = '(No headers found)'
-          opt2.disabled = true
-          targetsSelect.appendChild(opt2)
-          return
-        }
-        populateSelect(featuresSelect, headers)
-        populateSelect(targetsSelect, headers)
-      } catch (err) {
-        console.error('Error parsing CSV headers', err)
-      }
-    })
-  })()
-</script>
