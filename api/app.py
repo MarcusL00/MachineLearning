@@ -1,7 +1,9 @@
 from flask import Flask, request, render_template, abort, Response
 from jinja2 import TemplateNotFound
+from flask_cors import CORS
 
 app = Flask(__name__, template_folder="templates")  # templates/fragments/*.html
+CORS(app)
 
 @app.route("/fragment/raw")
 def fragment_raw():
