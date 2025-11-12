@@ -7,8 +7,8 @@ def create_app():
     CORS(app)
 
     # Register blueprints
-    from app.routes.upload import upload_bp
-    app.register_blueprint(upload_bp, url_prefix="/api")
+    from api.app.routes.predictionRoute import prediction_bp
+    app.register_blueprint(prediction_bp, url_prefix="/api")
 
     return app
 
