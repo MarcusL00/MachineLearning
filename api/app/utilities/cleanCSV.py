@@ -15,5 +15,7 @@ def cleanCSVData(csv_file):
     threshold = len(df) * 0.3
     data_copy = data_copy.dropna(axis=1, thresh=len(data_copy) - threshold)
 
-    # Return records (list of dicts) so it's JSON-serializable
-    return data_copy.to_dict(orient="records")
+    # Return a cleaned DataFrame. The caller (route) can convert to records
+    # for JSON responses when needed. Returning a DataFrame lets downstream
+    # ML functions operate on it directly.
+    return data_copy
