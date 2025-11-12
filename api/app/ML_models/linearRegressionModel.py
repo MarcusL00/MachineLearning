@@ -32,9 +32,9 @@ def train_and_plot(X, y, output_path):
     plt.savefig(output_path)
     plt.close()
 
-def main():
+def main(csv_data_frame):
     # Load your data
-    df = pd.read_csv("examples/test.csv")
+    df = csv_data_frame
 
     # Process the data
     headers = handleCSV(df)
