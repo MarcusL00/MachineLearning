@@ -30,7 +30,7 @@ def _handle_make_prediction():
     model_type = data.form.get("model_type")
 
     if model_type == "linear_regression":
-        from app.ML_models.linearRegressionModel import train_and_plot, prepareData, handleCSV
+        main(cleaned)
     elif model_type == "decision_tree":
         from app.ML_models.decisionTreeModel import train_and_plot, prepareData, handleCSV
     elif model_type == "logistic_regression":
