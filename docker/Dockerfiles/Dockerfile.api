@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0
+
+# The compose volume mounts the api/ChangeMe to /app, so all paths are relative to /app
+WORKDIR /app
+
+# Ensure appsettings.json exists
+RUN if [ ! -f /appsettings.json ]; then \
+      echo '{}' > /appsettings.json; \
+    fi
+
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    ASPNETCORE_URLS=http://0.0.0.0:8001 \
+    DOTNET_WATCH_RESTART_ON_RUDE_EDIT=1 \
+    ASPNETCORE_ENVIRONMENT=Container
+
+RUN apt-get update && apt-get install -y unzip curl && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /vsdbg && \
+    curl -sSL https://aka.ms/getvsdbgsh | bash /dev/stdin -v latest -l /vsdbg
+
+EXPOSE 8001 5678
+
+# Use dotnet watch on the API project, which is now at /app/ChangeMe.csproj
+CMD ["dotnet", "run", "--no-launch-profile", "--project", "ChangeMe.csproj", "--configuration", "Debug"]
