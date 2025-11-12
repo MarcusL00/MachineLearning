@@ -2,13 +2,13 @@
 def create_app():
     from flask import Flask
     from flask_cors import CORS
-    
+
     app = Flask(__name__)
     CORS(app)
 
     # Register blueprints
-    from api.app.routes.predictionRoute import prediction_bp
-    app.register_blueprint(prediction_bp, url_prefix="/api")
+    from app.routes.predictionRoute import make_prediction
+    app.register_blueprint(make_prediction, url_prefix="/api")
 
     return app
 
