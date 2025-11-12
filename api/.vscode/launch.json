@@ -5,7 +5,7 @@
       "name": "Docker: Attach to .NET Core",
       "type": "coreclr",
       "request": "attach",
-      "processId": "99",
+      "processName": "/app/bin/Debug/net9.0/CSVision",
       "sourceFileMap": {
         "/app": "${workspaceFolder}/CSVision"
       },
