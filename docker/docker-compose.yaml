@@ -1,5 +1,5 @@
 services:
-  csvision-web:
+  csvision-frontend:
     image: nginx:latest
     ports:
       - '8080:80'
@@ -7,6 +7,7 @@ services:
       - CSVision_network
     volumes:
       - ../frontend:/usr/share/nginx/html
+    restart: unless-stopped
 
   csvision-reverse-proxy:
     image: nginx:latest
@@ -17,6 +18,7 @@ services:
       - '443:443'
     networks:
       - CSVision_network
+    restart: unless-stopped
 
   csvision-api:
     build:
@@ -28,6 +30,7 @@ services:
       - '8001:8001'
     networks:
       - CSVision_network
+    restart: unless-stopped
 
 networks:
   CSVision_network:
