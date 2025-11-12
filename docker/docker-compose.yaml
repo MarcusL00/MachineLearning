@@ -23,11 +23,10 @@ services:
   csvision-api:
     build:
       context: ./../api/
-      dockerfile: ../docker/dockerfiles/Dockerfile.aspnet
-    container_name: change_me_api
+      dockerfile: ../docker/dockerfiles/Dockerfile.api
     working_dir: /app
     volumes:
-      - ./../api/ChangeMe:/app
+      - ./../api/CSVision:/app
       - /app/bin
       - /app/obj
     ports:

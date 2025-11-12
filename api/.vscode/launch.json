@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Docker: Attach to .NET Core",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "99",
+      "sourceFileMap": {
+        "/app": "${workspaceFolder}/CSVision"
+      },
+      "pipeTransport": {
+        "pipeProgram": "docker",
+        "pipeArgs": ["exec", "-i", "docker-csvision-api-1"],
+        "debuggerPath": "/vsdbg/vsdbg",
+        "pipeCwd": "${workspaceFolder}",
+        "quoteArgs": false
+      },
+      "args": ["--interpreter=vscode"],
+      "requireExactSource": false
+    }
+  ]
+}
