@@ -4,7 +4,7 @@ from app import app
 from flask import request, abort
 
 from app.utilities.cleanCSV import cleanCSVData
-from app.ML_models.linearRegressionModel import main
+from app.ML_models.linearRegressionModel import test
 
 @app.route("/prediction", methods=["POST"])
 
@@ -12,12 +12,11 @@ def make_prediction():
     data = request
     csv_file = data.files.get("csv_file")
     cleaned = cleanCSVData(csv_file)
-    main(cleaned)
 
     model_type = data.form.get("model_type")
 
     if model_type == "linear_regression":
-        main(cleaned)
+        test(cleaned)
     elif model_type == "decision_tree":
         from app.ML_models.decisionTreeModel import train_and_plot, prepareData, handleCSV
     elif model_type == "logistic_regression":

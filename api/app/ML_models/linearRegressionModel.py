@@ -32,7 +32,7 @@ def train_and_plot(X, y, output_path):
     plt.savefig(output_path)
     plt.close()
 
-def main(csv_data_frame):
+def test(csv_data_frame):
     # Load your data
     df = csv_data_frame
 
@@ -42,6 +42,3 @@ def main(csv_data_frame):
 
     # Train the model and plot
     train_and_plot(X, y, "linear_regression_output.png")
-
-if __name__ == "__main__":
-    main()
