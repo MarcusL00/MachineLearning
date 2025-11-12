@@ -5,12 +5,13 @@
     hx-post="/api/run-linear-model"
     hx-target="#results-container"
     hx-swap="innerHTML"
+    hx-indicator="#results-loading"
     enctype="multipart/form-data"
     method="post"
   >
     <div>
       <h3>Upload CSV file</h3>
-      <input type="file" id="csv-file" name="csv_file" accept=".csv" />
+      <input type="file" id="csv-file" name="csv_file" accept=".csv" required />
     </div>
     <div>
       <h3>Select Model</h3>
@@ -19,6 +20,25 @@
         <option value="model_b">Model B</option>
         <option value="model_c">Model C</option>
       </select>
+    </div>
+    <div>
+      <h3>Features</h3>
+      <p>Select which columns to use as features (multiple allowed).</p>
+      <select id="features-select" name="features[]" multiple disabled required>
+        <!-- populated from CSV headers -->
+      </select>
+    </div>
+    <div>
+      <h3>Targets</h3>
+      <p>Select which columns to use as targets (one or more).</p>
+      <select id="targets-select" name="targets[]" multiple disabled required>
+        <!-- populated from CSV headers -->
+      </select>
+    </div>
+    <div>
+      <h3>Seed</h3>
+      <p>Use -1 for random seed</p>
+      <input type="number" id="seed-input" name="seed" required value="-1" />
     </div>
     <div>
       <h3>Evaluation Settings</h3>
