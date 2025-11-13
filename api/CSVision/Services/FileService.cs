@@ -16,7 +16,7 @@ namespace CSVision.Services
             using var reader = new StreamReader(stream);
 
             var headerLine = reader.ReadLine();
-            var headers = headerLine.Split(',');
+            var headers = headerLine?.Split(',') ?? Array.Empty<string>();
 
             var cleanedLines = RemoveUnnamedCsvColumns(headers, reader);
             var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
