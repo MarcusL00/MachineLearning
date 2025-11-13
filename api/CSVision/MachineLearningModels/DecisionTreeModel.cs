@@ -1,7 +1,5 @@
 using CSVision.Models;
 using Microsoft.ML;
-using Microsoft.ML.Data;
-using Microsoft.ML.Trainers.FastTree;
 
 namespace CSVision.MachineLearningModels
 {
