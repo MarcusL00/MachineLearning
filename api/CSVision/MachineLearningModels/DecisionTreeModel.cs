@@ -3,9 +3,12 @@ using Microsoft.ML;
 
 namespace CSVision.MachineLearningModels
 {
-    public class DecisionTreeModel : AbstractMachineLearningModel
+    public sealed class DecisionTreeModel : AbstractMachineLearningModel
     {
         internal override string ModelName => "Decision Tree Model";
+
+        internal DecisionTreeModel(string[] features, string[] targets)
+            : base(features, targets) { }
 
         public override ModelResult TrainModel(IFormFile file)
         {
@@ -15,10 +18,10 @@ namespace CSVision.MachineLearningModels
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
             var pipeline = mlContext
-                .Transforms.Concatenate("Features", features)
+                .Transforms.Concatenate("Features", Features)
                 .Append(
                     mlContext.BinaryClassification.Trainers.FastTree(
-                        labelColumnName: "Label",
+                        labelColumnName: Targets[0],
                         featureColumnName: "Features"
                     )
                 );

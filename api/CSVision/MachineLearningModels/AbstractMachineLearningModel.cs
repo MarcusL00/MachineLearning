@@ -1,4 +1,5 @@
 using CSVision.Models;
+using CSVision.Utilities;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 
@@ -7,19 +8,21 @@ namespace CSVision.MachineLearningModels
     public abstract class AbstractMachineLearningModel
     {
         internal abstract string ModelName { get; }
-        private protected string[] features { get; }
+        private protected string[] Features { get; }
+        private protected string[] Targets { get; }
+
+        internal AbstractMachineLearningModel(string[] features, string[] targets)
+        {
+            Features = features;
+            Targets = targets;
+        }
 
         // TODO: Split this up, so it looks cleaner
         private protected IDataView HandleCSV(IFormFile file)
         {
             var mlContext = new MLContext();
 
-            // 1) Copy uploaded file to a temp path
-            var tempInput = Path.GetTempFileName();
-            using (var inputFs = new FileStream(tempInput, FileMode.Create, FileAccess.Write))
-            {
-                file.CopyTo(inputFs);
-            }
+            var tempInput = FileUtilities.CreateTempFile(file);
 
             // 2) Read and clean: remove unnamed header columns and their data
             string[] lines = File.ReadAllLines(tempInput);

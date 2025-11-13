@@ -1,5 +1,6 @@
 using System.Text;
 using CSVision.Interfaces;
+using CSVision.Utilities;
 
 namespace CSVision.Services
 {
@@ -22,6 +23,12 @@ namespace CSVision.Services
             var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
 
             return cleanedFile;
+        }
+
+        public IFormFile CleanseCsvFileAsync(IFormFile file)
+        {
+            var tempInput = FileUtilities.CreateTempFile(file);
+            throw new NotImplementedException();
         }
 
         private static List<string> RemoveUnnamedCsvColumns(string[] headers, StreamReader reader)

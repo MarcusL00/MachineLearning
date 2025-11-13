@@ -4,13 +4,17 @@ namespace CSVision.Mapper
 {
     internal static class MapToMachineLearningModel
     {
-        internal static AbstractMachineLearningModel MapToModel(string modelType)
+        internal static AbstractMachineLearningModel MapToModel(
+            string modelType,
+            string[] features,
+            string[] targets
+        )
         {
             return modelType switch
             {
-                "LinearRegression" => new LinearRegressionModel(),
-                "LogisticRegression" => new LogisticRegressionModel(),
-                "DecisionTree" => new DecisionTreeModel(),
+                "LinearRegression" => new LinearRegressionModel(features, targets),
+                "LogisticRegression" => new LogisticRegressionModel(features, targets),
+                "DecisionTree" => new DecisionTreeModel(features, targets),
                 _ => throw new ArgumentException("Invalid model type", nameof(modelType)),
             };
         }

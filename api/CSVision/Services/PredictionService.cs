@@ -16,12 +16,14 @@ namespace CSVision.Services
         // TODO: Make this return something useful
         public async Task GeneratePredictionsAsync(PredictionsRequestDto requestDto)
         {
-            var cleanedFile = _fileService.RemoveIdColumnAsync(requestDto.File);
+            //var cleanedFile = _fileService.RemoveIdColumnAsync(requestDto.File);
             var machineLearningModel = MapToMachineLearningModel.MapToModel(
-                requestDto.MachineLearningModel
+                requestDto.MachineLearningModel,
+                requestDto.Features.ToArray(),
+                requestDto.Targets.ToArray()
             );
 
-            machineLearningModel.TrainModel(cleanedFile);
+            machineLearningModel.TrainModel(requestDto.File);
         }
     }
 }
