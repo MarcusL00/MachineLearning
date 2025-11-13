@@ -6,7 +6,11 @@ namespace CSVision.MachineLearningModels
     public class linearRegressionModel : AbstractMachineLearningModel
     {
         internal override string ModelName => "Linear Regression Model";
-
+        /// <summary>
+        /// Train a linear regression model.
+        /// Expects the incoming CSV to include a "Label" column and feature columns that match the
+        /// inherited <c>features</c> list.
+        /// </summary>
         public RegressionMetrics TrainModel(IFormFile trainingData)
         {
             var mlContext = new MLContext();

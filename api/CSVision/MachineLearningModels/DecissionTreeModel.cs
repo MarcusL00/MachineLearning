@@ -1,14 +1,14 @@
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.ML.Trainers.FastTree;
 
 namespace CSVision.MachineLearningModels
 {
-    public class LogisticRegression : AbstractMachineLearningModel
+    public class DecissionTreeModel : AbstractMachineLearningModel
     {
-        internal override string ModelName => "Logistic Regression Model";
-
+        internal override string ModelName => "Decision Tree Model";
         /// <summary>
-        /// Train a binary logistic regression model.
+        /// Train a binary decision-tree style model using FastTree (gradient boosted trees).
         /// Expects the incoming CSV to include a "Label" column and feature columns that match the
         /// inherited <c>features</c> list.
         /// </summary>
@@ -20,15 +20,13 @@ namespace CSVision.MachineLearningModels
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
             var pipeline = mlContext.Transforms.Concatenate("Features", features)
-                .Append(mlContext.BinaryClassification.Trainers.LbfgsLogisticRegression(labelColumnName: "Label", featureColumnName: "Features"));
-            var model = pipeline.Fit(split.TrainSet);   
+                .Append(mlContext.BinaryClassification.Trainers.FastTree(labelColumnName: "Label", featureColumnName: "Features"));
 
+            var model = pipeline.Fit(split.TrainSet);
 
             var predictions = model.Transform(split.TestSet);
             var metrics = mlContext.BinaryClassification.Evaluate(predictions, labelColumnName: "Label", scoreColumnName: "Score");
 
-
-            // Model training logic will be implemented here
             return metrics;
         }
     }
