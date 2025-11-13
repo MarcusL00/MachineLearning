@@ -21,10 +21,7 @@ namespace CSVision.Controllers
         [HttpPost]
         public IActionResult Predict(PredictionsRequestDto requestDto)
         {
-            var cleanedFile = _fileService.RemoveIdColumnAsync(requestDto.File);
-            var whack = new linearRegressionModel();
-            whack.TrainModel(cleanedFile);
-            // _predictionService
+            _predictionService.GeneratePredictionsAsync(requestDto);
 
             var html =
                 $@"

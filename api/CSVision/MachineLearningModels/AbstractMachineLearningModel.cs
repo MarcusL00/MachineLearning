@@ -1,3 +1,4 @@
+using CSVision.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 
@@ -100,5 +101,7 @@ namespace CSVision.MachineLearningModels
 
             return dataView;
         }
+
+        public abstract ModelResult TrainModel(IFormFile file);
     }
 }

@@ -1,30 +1,49 @@
+using CSVision.Models;
 using Microsoft.ML;
-using Microsoft.ML.Data;
 
 namespace CSVision.MachineLearningModels
 {
-    public class linearRegressionModel : AbstractMachineLearningModel
+    public sealed class LinearRegressionModel : AbstractMachineLearningModel
     {
         internal override string ModelName => "Linear Regression Model";
 
-        public RegressionMetrics TrainModel(IFormFile trainingData)
+        public override ModelResult TrainModel(IFormFile file)
         {
             var mlContext = new MLContext();
-            var dataView = HandleCSV(trainingData);
+            var dataView = HandleCSV(file);
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
-            var pipeline = mlContext.Transforms.Concatenate("Features", features)
-                .Append(mlContext.Regression.Trainers.Sdca(labelColumnName: "Label", featureColumnName: "Features"));
+            var pipeline = mlContext
+                .Transforms.Concatenate("Features", features)
+                .Append(
+                    mlContext.Regression.Trainers.Sdca(
+                        labelColumnName: "Label",
+                        featureColumnName: "Features"
+                    )
+                );
 
             var model = pipeline.Fit(split.TrainSet);
 
             var predictions = model.Transform(split.TestSet);
-            var metrics = mlContext.Regression.Evaluate(predictions, labelColumnName: "Label", scoreColumnName: "Score");
+            var metrics = mlContext.Regression.Evaluate(
+                predictions,
+                labelColumnName: "Label",
+                scoreColumnName: "Score"
+            );
 
-            return metrics;
-
+            return new ModelResult
+            {
+                ModelName = ModelName,
+                TrainedModel = model,
+                Metrics = new Dictionary<string, double>
+                {
+                    { "RSquared", metrics.RSquared },
+                    { "MeanAbsoluteError", metrics.MeanAbsoluteError },
+                    { "MeanSquaredError", metrics.MeanSquaredError },
+                    { "RootMeanSquaredError", metrics.RootMeanSquaredError },
+                },
+            };
         }
-
     }
 }
