@@ -15,10 +15,17 @@ namespace CSVision.Services
             using var stream = file.OpenReadStream();
             using var reader = new StreamReader(stream);
 
-            // Read header line
             var headerLine = reader.ReadLine();
             var headers = headerLine.Split(',');
 
+            var cleanedLines = RemoveUnnamedCsvColumns(headers, reader);
+            var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
+
+            return cleanedFile;
+        }
+
+        private static List<string> RemoveUnnamedCsvColumns(string[] headers, StreamReader reader)
+        {
             // Find indices of unnamed columns (empty or whitespace)
             var unnamedIndices = headers
                 .Select((h, i) => new { h, i })
@@ -44,21 +51,27 @@ namespace CSVision.Services
                 cleanedLines.Add(string.Join(",", filtered));
             }
 
-            // Convert cleaned CSV back into a stream
+            return cleanedLines;
+        }
+
+        private static IFormFile CreateIFormFileFromCleanedData(
+            IFormFile originalFile,
+            List<string> cleanedLines
+        )
+        {
             var cleanedCsv = string.Join(Environment.NewLine, cleanedLines);
             var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(cleanedCsv));
 
-            // Create a new IFormFile from the cleaned stream
             var cleanedFile = new FormFile(
                 memoryStream,
                 0,
                 memoryStream.Length,
-                file.Name,
-                file.FileName
+                originalFile.Name,
+                originalFile.FileName
             )
             {
                 Headers = new HeaderDictionary(),
-                ContentType = file.ContentType,
+                ContentType = originalFile.ContentType,
             };
 
             return cleanedFile;
