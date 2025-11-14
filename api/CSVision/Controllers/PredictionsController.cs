@@ -1,6 +1,5 @@
 using CSVision.DTOs;
 using CSVision.Interfaces;
-using CSVision.MachineLearningModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSVision.Controllers

@@ -1,6 +1,5 @@
 using CSVision.Interfaces;
 using CSVision.Services;
-using Microsoft.Extensions.FileProviders;
 
 namespace CSVision
 {
@@ -9,6 +8,12 @@ namespace CSVision
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(55);
+                options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(55);
+            });
 
             SetupServices(builder);
 

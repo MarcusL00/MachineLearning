@@ -17,14 +17,14 @@ namespace CSVision.MachineLearningModels
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
-            var pipeline = mlContext
-                .Transforms.Concatenate("Features", Features)
+            var pipeline = BuildFeaturePipeline(mlContext, dataView, Targets[0])
                 .Append(
                     mlContext.BinaryClassification.Trainers.LbfgsLogisticRegression(
                         labelColumnName: Targets[0],
                         featureColumnName: "Features"
                     )
                 );
+
             var model = pipeline.Fit(split.TrainSet);
 
             var predictions = model.Transform(split.TestSet);

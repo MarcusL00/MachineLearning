@@ -17,8 +17,7 @@ namespace CSVision.MachineLearningModels
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
-            var pipeline = mlContext
-                .Transforms.Concatenate("Features", Features)
+            var pipeline = BuildFeaturePipeline(mlContext, dataView, Targets[0])
                 .Append(
                     mlContext.BinaryClassification.Trainers.FastTree(
                         labelColumnName: Targets[0],
