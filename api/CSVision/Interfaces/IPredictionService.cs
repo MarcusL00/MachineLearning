@@ -1,9 +1,10 @@
 using CSVision.DTOs;
+using CSVision.Models;
 
 namespace CSVision.Interfaces
 {
     public interface IPredictionService
     {
-        Task GeneratePredictionsAsync(PredictionsRequestDto requestDto);
+        ModelResult GeneratePredictionsAsync(PredictionsRequestDto requestDto);
     }
 }

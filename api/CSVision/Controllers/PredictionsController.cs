@@ -1,6 +1,6 @@
 using CSVision.DTOs;
 using CSVision.Interfaces;
-using CSVision.MachineLearningModels;
+using CSVision.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSVision.Controllers
@@ -21,7 +21,7 @@ namespace CSVision.Controllers
         [HttpPost]
         public IActionResult Predict(PredictionsRequestDto requestDto)
         {
-            _predictionService.GeneratePredictionsAsync(requestDto);
+            ModelResult result = _predictionService.GeneratePredictionsAsync(requestDto);
 
             var html =
                 $@"

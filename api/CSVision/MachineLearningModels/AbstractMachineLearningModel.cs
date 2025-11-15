@@ -1,4 +1,5 @@
 using CSVision.Models;
+using CSVision.Utilities;
 using Microsoft.ML;
 using Microsoft.ML.Data;
 
@@ -7,101 +8,216 @@ namespace CSVision.MachineLearningModels
     public abstract class AbstractMachineLearningModel
     {
         internal abstract string ModelName { get; }
-        private protected string[] features { get; }
+        private protected string[] Features { get; }
+        private protected string Target { get; }
+        private protected int Seed { get; }
 
-        // TODO: Split this up, so it looks cleaner
-        private protected IDataView HandleCSV(IFormFile file)
+        internal AbstractMachineLearningModel(string[] features, string target, int seed)
+        {
+            Features = features;
+            Target = target;
+            Seed = seed;
+        }
+
+        public abstract ModelResult TrainModel(IFormFile file);
+
+        // Child classes must provide their trainer
+        protected abstract IEstimator<ITransformer> BuildTrainer(MLContext mlContext);
+
+        protected abstract IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext);
+
+        // Child classes must provide their evaluator
+        protected abstract Dictionary<string, double> EvaluateModel(
+            MLContext mlContext,
+            IDataView predictions
+        );
+
+        /// <summary>
+        /// Generic training template: handles pipeline, train/test split, fitting, evaluation.
+        /// </summary>
+        private protected ModelResult TrainWithTemplate(IFormFile file)
+        {
+            var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
+            var dataView = CreateDataViewFromCsvFile(file, out string tempCleaned);
+
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            // Build feature + label pipeline
+            var baseEstimator = BuildFeaturePipeline(mlContext, dataView, Target)
+                .Append(BuildLabelConversion(mlContext));
+
+            var baseTransformer = baseEstimator.Fit(split.TrainSet);
+            var transformedTrain = baseTransformer.Transform(split.TrainSet);
+
+            // Train
+            var trainerEstimator = BuildTrainer(mlContext);
+            ITransformer trainerTransformer;
+            try
+            {
+                trainerTransformer = trainerEstimator.Fit(transformedTrain);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Trainer.Fit exception: " + ex.Message);
+                try
+                {
+                    var preview = transformedTrain.Preview(maxRows: 10);
+                    Console.WriteLine("--- Transformed train preview ---");
+                    foreach (var col in preview.ColumnView)
+                    {
+                        Console.WriteLine(
+                            $"Column: {col.Column.Name} (Type: {col.Column.Type}) Values: {string.Join(",", col.Values.Select(v => v?.ToString() ?? "<null>"))}"
+                        );
+                    }
+                }
+                catch (Exception ex2)
+                {
+                    Console.WriteLine("Failed to preview transformed train: " + ex2.Message);
+                }
+
+                throw;
+            }
+
+            // Evaluate
+            var transformedTest = baseTransformer.Transform(split.TestSet);
+            var predictions = trainerTransformer.Transform(transformedTest);
+            var metrics = EvaluateModel(mlContext, predictions);
+
+            // Compose final model
+            var model = baseTransformer.Append(trainerTransformer);
+
+            FileUtilities.DeleteTempFile(tempCleaned);
+
+            return new ModelResult
+            {
+                ModelName = ModelName,
+                TrainedModel = model,
+                Metrics = metrics,
+            };
+        }
+
+        private protected IEstimator<ITransformer> BuildFeaturePipeline(
+            MLContext mlContext,
+            IDataView dataView,
+            string targetColumn
+        )
+        {
+            var transforms = new List<IEstimator<ITransformer>>();
+            var featureColumns = new List<string>();
+
+            IEnumerable<(string name, DataViewType? type)> columnsToProcess;
+            if (Features != null && Features.Length > 0)
+            {
+                columnsToProcess = Features
+                    .Where(f => !string.Equals(f, targetColumn, StringComparison.OrdinalIgnoreCase))
+                    .Select(f =>
+                    {
+                        int foundIdx = -1;
+                        for (int i = 0; i < dataView.Schema.Count; i++)
+                        {
+                            if (dataView.Schema[i].Name == f)
+                            {
+                                foundIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (foundIdx >= 0)
+                            return (name: f, type: dataView.Schema[foundIdx].Type);
+
+                        return (name: f, type: (DataViewType?)null);
+                    });
+            }
+            else
+            {
+                columnsToProcess = dataView
+                    .Schema.Where(c => c.Name != targetColumn)
+                    .Select(c => (name: c.Name, type: (DataViewType?)c.Type));
+            }
+
+            foreach (var (name, type) in columnsToProcess)
+            {
+                var outputCol = name + "_num";
+
+                if (type == null)
+                    continue;
+
+                if (type.RawType == typeof(string) || type is TextDataViewType)
+                {
+                    transforms.Add(
+                        mlContext.Transforms.Text.FeaturizeText(
+                            outputColumnName: outputCol,
+                            inputColumnName: name
+                        )
+                    );
+                }
+                else
+                {
+                    transforms.Add(
+                        mlContext.Transforms.Conversion.ConvertType(
+                            outputColumnName: outputCol,
+                            inputColumnName: name,
+                            outputKind: DataKind.Single
+                        )
+                    );
+                }
+
+                featureColumns.Add(outputCol);
+            }
+
+            transforms.Add(mlContext.Transforms.Concatenate("Features", featureColumns.ToArray()));
+
+            return transforms.Aggregate((current, next) => current.Append(next));
+        }
+
+        private protected IDataView CreateDataViewFromCsvFile(
+            IFormFile file,
+            out string tempCleaned
+        )
         {
             var mlContext = new MLContext();
 
-            // 1) Copy uploaded file to a temp path
-            var tempInput = Path.GetTempFileName();
-            using (var inputFs = new FileStream(tempInput, FileMode.Create, FileAccess.Write))
-            {
-                file.CopyTo(inputFs);
-            }
+            tempCleaned = FileUtilities.CreateTempFile(file);
+            string[] lines = File.ReadAllLines(tempCleaned);
 
-            // 2) Read and clean: remove unnamed header columns and their data
-            string[] lines = File.ReadAllLines(tempInput);
-            if (lines.Length == 0)
-                throw new InvalidOperationException("CSV is empty.");
-
-            // Parse header
-            var headers = lines[0].Split(',');
-            var unnamedIndices = headers
-                .Select((h, i) => new { h, i })
-                .Where(x => string.IsNullOrWhiteSpace(x.h))
-                .Select(x => x.i)
-                .ToHashSet();
-
-            // Build cleaned header excluding unnamed columns
-            var cleanedHeader = string.Join(
-                ",",
-                headers.Where((h, i) => !unnamedIndices.Contains(i))
-            );
-
-            // Filter each data line by excluding unnamed indices
-            var cleanedLines = new List<string>(capacity: lines.Length) { cleanedHeader };
-            for (int r = 1; r < lines.Length; r++)
-            {
-                var parts = lines[r].Split(',');
-                var filtered = parts.Where((col, idx) => !unnamedIndices.Contains(idx));
-                cleanedLines.Add(string.Join(",", filtered));
-            }
-
-            // 3) Persist cleaned CSV to a new temp file
-            var tempCleaned = Path.GetTempFileName();
-            File.WriteAllLines(tempCleaned, cleanedLines);
-
-            // 4) Build dynamic TextLoader schema from cleaned header
+            var cleanedHeader = lines[0];
             var cleanedHeaders = cleanedHeader.Split(',');
-            var columns = cleanedHeaders
-                .Select(
-                    (h, i) =>
-                        new TextLoader.Column(
-                            string.IsNullOrWhiteSpace(h) ? $"Column{i}" : h,
-                            DataKind.String,
-                            i
-                        )
-                )
-                .ToArray();
+            var sampleRows = lines.Skip(1).Take(10).Select(l => l.Split(',')).ToList();
+
+            var columns = new List<TextLoader.Column>();
+            for (int i = 0; i < cleanedHeaders.Length; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(cleanedHeaders[i])
+                    ? $"Column{i}"
+                    : cleanedHeaders[i];
+
+                bool isNumeric = sampleRows
+                    .Select(r => r.Length > i ? r[i] : null)
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .All(v => float.TryParse(v, out _));
+
+                columns.Add(
+                    new TextLoader.Column(name, isNumeric ? DataKind.Single : DataKind.String, i)
+                );
+            }
 
             var textLoader = mlContext.Data.CreateTextLoader(
                 new TextLoader.Options
                 {
                     Separators = new[] { ',' },
                     HasHeader = true,
-                    Columns = columns,
+                    Columns = columns.ToArray(),
                 }
             );
 
-            // 5) Load IDataView from the cleaned file
-            // Works across ML.NET versions: use MultiFileSource or pass the path overload
-            // If your version only accepts IMultiStreamSource, use: new MultiFileSource(tempCleaned)
-            IDataView dataView;
             try
             {
-                // Try the IMultiStreamSource path (preferred in newer versions)
-                dataView = textLoader.Load(new MultiFileSource(tempCleaned));
+                return textLoader.Load(new MultiFileSource(tempCleaned));
             }
             catch
             {
-                // Fallback: some versions allow passing the file path directly
-                dataView = textLoader.Load(tempCleaned);
+                return textLoader.Load(tempCleaned);
             }
-
-            // 6) Optional: cleanup tempInput; keep tempCleaned if you need it later
-            try
-            {
-                File.Delete(tempInput);
-            }
-            catch
-            { /* ignore */
-            }
-
-            return dataView;
         }
-
-        public abstract ModelResult TrainModel(IFormFile file);
     }
 }

@@ -13,8 +13,8 @@ namespace CSVision.DTOs
         [FromForm(Name = "features[]")]
         public List<string> Features { get; set; }
 
-        [FromForm(Name = "targets[]")]
-        public List<string> Targets { get; set; }
+        [FromForm(Name = "target")]
+        public string Target { get; set; }
 
         [FromForm(Name = "seed")]
         public int Seed { get; set; }
