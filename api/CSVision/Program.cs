@@ -35,7 +35,6 @@ namespace CSVision
             // Scoped Services
             builder.Services.AddScoped<IPredictionService, PredictionService>();
             builder.Services.AddScoped<IFileService, FileService>();
-            builder.Services.AddScoped<IHtmlService, HtmlService>();
         }
     }
 }
