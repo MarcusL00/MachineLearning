@@ -1,5 +1,6 @@
 using CSVision.Models;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 
 namespace CSVision.MachineLearningModels
 {
@@ -10,42 +11,55 @@ namespace CSVision.MachineLearningModels
         internal LogisticRegressionModel(string[] features, string target, int seed)
             : base(features, target, seed) { }
 
-        public override ModelResult TrainModel(IFormFile file)
+        protected override IEstimator<ITransformer> BuildTrainer(MLContext mlContext)
         {
-            var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
-            var dataView = CreateDataViewFromCsvFile(file);
-
-            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-
-            var pipeline = BuildFeaturePipeline(mlContext, dataView, Target)
-                .Append(
-                    mlContext.BinaryClassification.Trainers.LbfgsLogisticRegression(
-                        labelColumnName: Target,
-                        featureColumnName: "Features"
-                    )
-                );
-
-            var model = pipeline.Fit(split.TrainSet);
-
-            var predictions = model.Transform(split.TestSet);
-            var metrics = mlContext.BinaryClassification.Evaluate(
-                predictions,
+            return mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(
                 labelColumnName: "Label",
-                scoreColumnName: "Score"
+                featureColumnName: "Features"
             );
-
-            // Model training logic will be implemented here
-            return new ModelResult
-            {
-                ModelName = ModelName,
-                TrainedModel = model,
-                Metrics = new Dictionary<string, double>
-                {
-                    { "Accuracy", metrics.Accuracy },
-                    { "AUC", metrics.AreaUnderRocCurve },
-                    { "F1Score", metrics.F1Score },
-                },
-            };
         }
+
+        protected override Dictionary<string, double> EvaluateModel(
+            MLContext mlContext,
+            IDataView predictions
+        )
+        {
+            var metrics = mlContext.BinaryClassification.Evaluate(predictions, "Label");
+
+            var results = new Dictionary<string, double>
+            {
+                { "Accuracy", metrics.Accuracy },
+                { "F1Score", metrics.F1Score },
+                { "PositivePrecision", metrics.PositivePrecision },
+                { "PositiveRecall", metrics.PositiveRecall },
+                { "NegativePrecision", metrics.NegativePrecision },
+                { "NegativeRecall", metrics.NegativeRecall },
+                { "LogLoss", metrics.LogLoss },
+                { "LogLossReduction", metrics.LogLossReduction },
+            };
+
+            // Only add AUC if it’s valid, to avoid an ArgumentOutOfRangeException
+            if (!double.IsNaN(metrics.AreaUnderRocCurve) && metrics.AreaUnderRocCurve > 0)
+            {
+                results.Add("AUC", metrics.AreaUnderRocCurve);
+            }
+
+            if (
+                !double.IsNaN(metrics.AreaUnderPrecisionRecallCurve)
+                && metrics.AreaUnderPrecisionRecallCurve > 0
+            )
+            {
+                results.Add("PRC", metrics.AreaUnderPrecisionRecallCurve);
+            }
+
+            return results;
+        }
+
+        protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
+        {
+            return mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Boolean);
+        }
+
+        public override ModelResult TrainModel(IFormFile file) => TrainWithTemplate(file);
     }
 }

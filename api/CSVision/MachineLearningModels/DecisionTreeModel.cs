@@ -1,5 +1,6 @@
 using CSVision.Models;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 
 namespace CSVision.MachineLearningModels
 {
@@ -10,42 +11,34 @@ namespace CSVision.MachineLearningModels
         internal DecisionTreeModel(string[] features, string target, int seed)
             : base(features, target, seed) { }
 
-        public override ModelResult TrainModel(IFormFile file)
+        protected override IEstimator<ITransformer> BuildTrainer(MLContext mlContext)
         {
-            var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
-
-            var dataView = CreateDataViewFromCsvFile(file);
-
-            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
-
-            var pipeline = BuildFeaturePipeline(mlContext, dataView, Target)
-                .Append(
-                    mlContext.BinaryClassification.Trainers.FastTree(
-                        labelColumnName: Target,
-                        featureColumnName: "Features"
-                    )
-                );
-
-            var model = pipeline.Fit(split.TrainSet);
-
-            var predictions = model.Transform(split.TestSet);
-            var metrics = mlContext.BinaryClassification.Evaluate(
-                predictions,
-                labelColumnName: "Label",
-                scoreColumnName: "Score"
+            return mlContext.MulticlassClassification.Trainers.OneVersusAll(
+                mlContext.BinaryClassification.Trainers.FastTree(),
+                labelColumnName: "Label"
             );
+        }
 
-            return new ModelResult
+        protected override Dictionary<string, double> EvaluateModel(
+            MLContext mlContext,
+            IDataView predictions
+        )
+        {
+            var metrics = mlContext.MulticlassClassification.Evaluate(predictions, "Label");
+            return new Dictionary<string, double>
             {
-                ModelName = ModelName,
-                TrainedModel = model,
-                Metrics = new Dictionary<string, double>
-                {
-                    { "Accuracy", metrics.Accuracy },
-                    { "AUC", metrics.AreaUnderRocCurve },
-                    { "F1Score", metrics.F1Score },
-                },
+                { "MicroAccuracy", metrics.MicroAccuracy },
+                { "MacroAccuracy", metrics.MacroAccuracy },
+                { "LogLoss", metrics.LogLoss },
             };
         }
+
+        protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
+        {
+            // Convert labels to Key type for multiclass
+            return mlContext.Transforms.Conversion.MapValueToKey("Label", Target);
+        }
+
+        public override ModelResult TrainModel(IFormFile file) => TrainWithTemplate(file);
     }
 }

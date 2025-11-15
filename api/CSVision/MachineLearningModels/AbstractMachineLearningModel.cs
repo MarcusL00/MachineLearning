@@ -21,6 +21,81 @@ namespace CSVision.MachineLearningModels
 
         public abstract ModelResult TrainModel(IFormFile file);
 
+        // Child classes must provide their trainer
+        protected abstract IEstimator<ITransformer> BuildTrainer(MLContext mlContext);
+
+        protected abstract IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext);
+
+        // Child classes must provide their evaluator
+        protected abstract Dictionary<string, double> EvaluateModel(
+            MLContext mlContext,
+            IDataView predictions
+        );
+
+        /// <summary>
+        /// Generic training template: handles pipeline, train/test split, fitting, evaluation.
+        /// </summary>
+        private protected ModelResult TrainWithTemplate(IFormFile file)
+        {
+            var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
+            var dataView = CreateDataViewFromCsvFile(file, out string tempCleaned);
+
+            var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
+
+            // Build feature + label pipeline
+            var baseEstimator = BuildFeaturePipeline(mlContext, dataView, Target)
+                .Append(BuildLabelConversion(mlContext));
+
+            var baseTransformer = baseEstimator.Fit(split.TrainSet);
+            var transformedTrain = baseTransformer.Transform(split.TrainSet);
+
+            // Train
+            var trainerEstimator = BuildTrainer(mlContext);
+            ITransformer trainerTransformer;
+            try
+            {
+                trainerTransformer = trainerEstimator.Fit(transformedTrain);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Trainer.Fit exception: " + ex.Message);
+                try
+                {
+                    var preview = transformedTrain.Preview(maxRows: 10);
+                    Console.WriteLine("--- Transformed train preview ---");
+                    foreach (var col in preview.ColumnView)
+                    {
+                        Console.WriteLine(
+                            $"Column: {col.Column.Name} (Type: {col.Column.Type}) Values: {string.Join(",", col.Values.Select(v => v?.ToString() ?? "<null>"))}"
+                        );
+                    }
+                }
+                catch (Exception ex2)
+                {
+                    Console.WriteLine("Failed to preview transformed train: " + ex2.Message);
+                }
+
+                throw;
+            }
+
+            // Evaluate
+            var transformedTest = baseTransformer.Transform(split.TestSet);
+            var predictions = trainerTransformer.Transform(transformedTest);
+            var metrics = EvaluateModel(mlContext, predictions);
+
+            // Compose final model
+            var model = baseTransformer.Append(trainerTransformer);
+
+            FileUtilities.DeleteTempFile(tempCleaned);
+
+            return new ModelResult
+            {
+                ModelName = ModelName,
+                TrainedModel = model,
+                Metrics = metrics,
+            };
+        }
+
         private protected IEstimator<ITransformer> BuildFeaturePipeline(
             MLContext mlContext,
             IDataView dataView,
@@ -30,8 +105,6 @@ namespace CSVision.MachineLearningModels
             var transforms = new List<IEstimator<ITransformer>>();
             var featureColumns = new List<string>();
 
-            // If the user provided an explicit Features list, use it. Otherwise fall back
-            // to scanning the dataView schema and using every column except the target.
             IEnumerable<(string name, DataViewType? type)> columnsToProcess;
             if (Features != null && Features.Length > 0)
             {
@@ -66,12 +139,9 @@ namespace CSVision.MachineLearningModels
             {
                 var outputCol = name + "_num";
 
-                // If we couldn't find the column in the schema, skip it
                 if (type == null)
                     continue;
 
-                // If the source column is textual, featurize it (handles categorical/text data).
-                // Otherwise, try to convert to single (numeric).
                 if (type.RawType == typeof(string) || type is TextDataViewType)
                 {
                     transforms.Add(
@@ -95,77 +165,58 @@ namespace CSVision.MachineLearningModels
                 featureColumns.Add(outputCol);
             }
 
-            // Concatenate all transformed features
             transforms.Add(mlContext.Transforms.Concatenate("Features", featureColumns.ToArray()));
 
-            // Return the chain of transforms (no trainer yet)
             return transforms.Aggregate((current, next) => current.Append(next));
         }
 
-        // Build an IDataView from an already-cleaned IFormFile. This allows file handling
-        // (cleaning, temp paths) to live in FileService while ML code converts the cleaned
-        // file into an IDataView. FileService should return a cleaned IFormFile which can
-        // be passed here.
-        private protected IDataView CreateDataViewFromCsvFile(IFormFile file)
+        private protected IDataView CreateDataViewFromCsvFile(
+            IFormFile file,
+            out string tempCleaned
+        )
         {
             var mlContext = new MLContext();
 
-            string tempCleaned = string.Empty;
+            tempCleaned = FileUtilities.CreateTempFile(file);
+            string[] lines = File.ReadAllLines(tempCleaned);
+
+            var cleanedHeader = lines[0];
+            var cleanedHeaders = cleanedHeader.Split(',');
+            var sampleRows = lines.Skip(1).Take(10).Select(l => l.Split(',')).ToList();
+
+            var columns = new List<TextLoader.Column>();
+            for (int i = 0; i < cleanedHeaders.Length; i++)
+            {
+                string name = string.IsNullOrWhiteSpace(cleanedHeaders[i])
+                    ? $"Column{i}"
+                    : cleanedHeaders[i];
+
+                bool isNumeric = sampleRows
+                    .Select(r => r.Length > i ? r[i] : null)
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .All(v => float.TryParse(v, out _));
+
+                columns.Add(
+                    new TextLoader.Column(name, isNumeric ? DataKind.Single : DataKind.String, i)
+                );
+            }
+
+            var textLoader = mlContext.Data.CreateTextLoader(
+                new TextLoader.Options
+                {
+                    Separators = new[] { ',' },
+                    HasHeader = true,
+                    Columns = columns.ToArray(),
+                }
+            );
 
             try
             {
-                // Persist IFormFile to temp path so TextLoader can read it
-                tempCleaned = FileUtilities.CreateTempFile(file);
-
-                // Read header and sample rows
-                string[] lines = File.ReadAllLines(tempCleaned);
-
-                var cleanedHeader = lines[0];
-                var cleanedHeaders = cleanedHeader.Split(',');
-                var sampleRows = lines.Skip(1).Take(10).Select(l => l.Split(',')).ToList();
-
-                var columns = new List<TextLoader.Column>();
-                for (int i = 0; i < cleanedHeaders.Length; i++)
-                {
-                    string name = string.IsNullOrWhiteSpace(cleanedHeaders[i])
-                        ? $"Column{i}"
-                        : cleanedHeaders[i];
-
-                    bool isNumeric = sampleRows
-                        .Select(r => r.Length > i ? r[i] : null)
-                        .Where(v => !string.IsNullOrWhiteSpace(v))
-                        .All(v => float.TryParse(v, out _));
-
-                    columns.Add(
-                        new TextLoader.Column(
-                            name,
-                            isNumeric ? DataKind.Single : DataKind.String,
-                            i
-                        )
-                    );
-                }
-
-                var textLoader = mlContext.Data.CreateTextLoader(
-                    new TextLoader.Options
-                    {
-                        Separators = new[] { ',' },
-                        HasHeader = true,
-                        Columns = columns.ToArray(),
-                    }
-                );
-
-                try
-                {
-                    return textLoader.Load(new MultiFileSource(tempCleaned));
-                }
-                catch
-                {
-                    return textLoader.Load(tempCleaned);
-                }
+                return textLoader.Load(new MultiFileSource(tempCleaned));
             }
-            finally
+            catch
             {
-                FileUtilities.DeleteTempFile(tempCleaned);
+                return textLoader.Load(tempCleaned);
             }
         }
     }

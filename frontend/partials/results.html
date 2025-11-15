@@ -27,6 +27,18 @@
             trigger.id === 'model-form' ||
             (trigger.closest && trigger.closest('#model-form'))
           ) {
+            // Replace the current results with a lightweight loading state so
+            // users see the spinner immediately instead of the old results.
+            const resultsContainer =
+              document.getElementById('results-container')
+            if (resultsContainer) {
+              resultsContainer.innerHTML = `
+                <div id="results-loading" class="htmx-indicator htmx-request" aria-hidden="false" style="align-items: center; gap: 8px; margin-bottom: 12px">
+                  <span class="loader" aria-hidden="true" style="color: var(--primary-color)"></span>
+                </div>
+              `
+            }
+            // also set the standalone indicator (if present) for accessibility
             indicator.classList.add('htmx-request')
             indicator.setAttribute('aria-hidden', 'false')
           }
@@ -45,6 +57,8 @@
           ) {
             indicator.classList.remove('htmx-request')
             indicator.setAttribute('aria-hidden', 'true')
+            // HTMX will swap the real response into #results-container.
+            // No further DOM cleanup is required here.
           }
         } catch (e) {
           console.error(e)
