@@ -40,7 +40,7 @@
 }
 .loader::before {
   animation-delay: 0.4s;
-  left: 60px;
+  left: -30px;
 }
 
 @keyframes animloader {

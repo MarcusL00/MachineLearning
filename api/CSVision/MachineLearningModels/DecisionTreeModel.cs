@@ -7,8 +7,8 @@ namespace CSVision.MachineLearningModels
     {
         internal override string ModelName => "Decision Tree Model";
 
-        internal DecisionTreeModel(string[] features, string[] targets)
-            : base(features, targets) { }
+        internal DecisionTreeModel(string[] features, string target)
+            : base(features, target) { }
 
         public override ModelResult TrainModel(IFormFile file)
         {
@@ -17,10 +17,10 @@ namespace CSVision.MachineLearningModels
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
-            var pipeline = BuildFeaturePipeline(mlContext, dataView, Targets[0])
+            var pipeline = BuildFeaturePipeline(mlContext, dataView, Target)
                 .Append(
                     mlContext.BinaryClassification.Trainers.FastTree(
-                        labelColumnName: Targets[0],
+                        labelColumnName: Target,
                         featureColumnName: "Features"
                     )
                 );

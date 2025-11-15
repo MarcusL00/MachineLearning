@@ -1,6 +1,7 @@
 using CSVision.DTOs;
 using CSVision.Interfaces;
 using CSVision.Mapper;
+using CSVision.Models;
 
 namespace CSVision.Services
 {
@@ -13,17 +14,19 @@ namespace CSVision.Services
             _fileService = fileService;
         }
 
-        // TODO: Make this return something useful
-        public async Task GeneratePredictionsAsync(PredictionsRequestDto requestDto)
+        // TODO: Change return so it also returns a graph
+        public async Task<ModelResult> GeneratePredictionsAsync(PredictionsRequestDto requestDto)
         {
             //var cleanedFile = _fileService.RemoveIdColumnAsync(requestDto.File);
             var machineLearningModel = MapToMachineLearningModel.MapToModel(
                 requestDto.MachineLearningModel,
                 requestDto.Features.ToArray(),
-                requestDto.Targets.ToArray()
+                requestDto.Target
             );
 
-            machineLearningModel.TrainModel(requestDto.File);
+            ModelResult result = machineLearningModel.TrainModel(requestDto.File);
+
+            return result;
         }
     }
 }

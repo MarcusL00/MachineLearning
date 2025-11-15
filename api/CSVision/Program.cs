@@ -11,8 +11,9 @@ namespace CSVision
 
             builder.WebHost.ConfigureKestrel(options =>
             {
-                options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(55);
-                options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(55);
+                // Overkill timeout, but ensures long-running requests complete
+                options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(60);
+                options.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(60);
             });
 
             SetupServices(builder);
@@ -34,6 +35,7 @@ namespace CSVision
             // Scoped Services
             builder.Services.AddScoped<IPredictionService, PredictionService>();
             builder.Services.AddScoped<IFileService, FileService>();
+            builder.Services.AddScoped<IHtmlService, HtmlService>();
         }
     }
 }

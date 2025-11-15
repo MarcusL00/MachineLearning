@@ -1,7 +1,7 @@
+using System.Linq;
 using CSVision.Models;
 using Microsoft.ML;
 using Microsoft.ML.Data;
-using System.Linq;
 
 namespace CSVision.MachineLearningModels
 {
@@ -9,8 +9,8 @@ namespace CSVision.MachineLearningModels
     {
         internal override string ModelName => "Linear Regression Model";
 
-        internal LinearRegressionModel(string[] features, string[] targets)
-            : base(features, targets) { }
+        internal LinearRegressionModel(string[] features, string target)
+            : base(features, target) { }
 
         public override ModelResult TrainModel(IFormFile file)
         {
@@ -21,14 +21,10 @@ namespace CSVision.MachineLearningModels
 
             // Build the feature + label conversion estimator (without the trainer) so we can
             // inspect the transformed label column before attempting to train. This avoids
-            // the opaque "Training set has 0 instances" error when label conversion drops all rows.
-            var baseEstimator = BuildFeaturePipeline(mlContext, dataView, Targets[0])
+            // the opaque "½set has 0 instances" error when label conversion drops all rows.
+            var baseEstimator = BuildFeaturePipeline(mlContext, dataView, Target)
                 .Append(
-                    mlContext.Transforms.Conversion.ConvertType(
-                        "Label",
-                        Targets[0],
-                        DataKind.Single
-                    )
+                    mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Single)
                 );
 
             // Fit the base estimator and transform the training set to inspect labels
@@ -40,16 +36,6 @@ namespace CSVision.MachineLearningModels
 
             var totalTrainRows = labelValues.Length;
             var validLabelCount = labelValues.Count(v => !float.IsNaN(v));
-
-            Console.WriteLine($"Training rows after transform: {totalTrainRows}; valid Label values: {validLabelCount}");
-            Console.WriteLine("Sample label values: " + string.Join(",", labelValues.Take(10).Select(v => v.ToString())));
-
-            if (validLabelCount == 0)
-                throw new InvalidOperationException(
-                    $"Training set has 0 valid label values after converting '{Targets[0]}' to Single. " +
-                    "Check the CSV for missing/non-numeric label values or choose a different target column. " +
-                    "Sample converted labels: " + string.Join(",", labelValues.Take(10))
-                );
 
             // Train only on the already-transformed training data to avoid re-applying
             // and potentially changing the base transformer during Fit. This also gives
@@ -73,7 +59,9 @@ namespace CSVision.MachineLearningModels
                     Console.WriteLine("--- Transformed train preview ---");
                     foreach (var col in preview.ColumnView)
                     {
-                        Console.WriteLine($"Column: {col.Column.Name} (Type: {col.Column.Type}) Values: {string.Join(",", col.Values.Select(v => v?.ToString() ?? "<null>"))}");
+                        Console.WriteLine(
+                            $"Column: {col.Column.Name} (Type: {col.Column.Type}) Values: {string.Join(",", col.Values.Select(v => v?.ToString() ?? "<null>"))}"
+                        );
                     }
                 }
                 catch (Exception ex2)

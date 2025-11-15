@@ -9,12 +9,12 @@ namespace CSVision.MachineLearningModels
     {
         internal abstract string ModelName { get; }
         private protected string[] Features { get; }
-        private protected string[] Targets { get; }
+        private protected string Target { get; }
 
-        internal AbstractMachineLearningModel(string[] features, string[] targets)
+        internal AbstractMachineLearningModel(string[] features, string target)
         {
             Features = features;
-            Targets = targets;
+            Target = target;
         }
 
         public abstract ModelResult TrainModel(IFormFile file);
@@ -146,8 +146,8 @@ namespace CSVision.MachineLearningModels
             }
             else
             {
-                columnsToProcess = dataView.Schema
-                    .Where(c => c.Name != targetColumn)
+                columnsToProcess = dataView
+                    .Schema.Where(c => c.Name != targetColumn)
                     .Select(c => (name: c.Name, type: (DataViewType?)c.Type));
             }
 
