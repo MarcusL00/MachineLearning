@@ -9,13 +9,13 @@ namespace CSVision.MachineLearningModels
     {
         internal override string ModelName => "Linear Regression Model";
 
-        internal LinearRegressionModel(string[] features, string target)
-            : base(features, target) { }
+        internal LinearRegressionModel(string[] features, string target, int seed)
+            : base(features, target, seed) { }
 
         public override ModelResult TrainModel(IFormFile file)
         {
-            var mlContext = new MLContext();
-            var dataView = HandleCSV(file);
+            var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
+            var dataView = CreateDataViewFromCsvFile(file);
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 

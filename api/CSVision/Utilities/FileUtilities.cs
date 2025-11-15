@@ -18,5 +18,13 @@ namespace CSVision.Utilities
 
             return tempFileName;
         }
+
+        internal static void DeleteTempFile(string filePath)
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
     }
 }

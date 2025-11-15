@@ -6,59 +6,43 @@ namespace CSVision.Services
 {
     public sealed class FileService : IFileService
     {
-        public Task ValidateCsvFileAsync(IFormFile file)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IFormFile RemoveIdColumnAsync(IFormFile file)
-        {
-            using var stream = file.OpenReadStream();
-            using var reader = new StreamReader(stream);
-
-            var headerLine = reader.ReadLine();
-            var headers = headerLine?.Split(',') ?? Array.Empty<string>();
-
-            var cleanedLines = RemoveUnnamedCsvColumns(headers, reader);
-            var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
-
-            return cleanedFile;
-        }
-
         public IFormFile CleanseCsvFileAsync(IFormFile file)
         {
-            var tempInput = FileUtilities.CreateTempFile(file);
-            throw new NotImplementedException();
-        }
+            string tempInput = string.Empty;
 
-        private static List<string> RemoveUnnamedCsvColumns(string[] headers, StreamReader reader)
-        {
-            // Find indices of unnamed columns (empty or whitespace)
-            var unnamedIndices = headers
-                .Select((h, i) => new { h, i })
-                .Where(x => string.IsNullOrWhiteSpace(x.h))
-                .Select(x => x.i)
-                .ToHashSet();
-
-            // Build new header without unnamed columns
-            var cleanedHeader = string.Join(
-                ",",
-                headers.Where((h, i) => !unnamedIndices.Contains(i))
-            );
-
-            var cleanedLines = new List<string> { cleanedHeader };
-
-            // Process remaining rows
-            while (!reader.EndOfStream)
+            try
             {
-                var line = reader.ReadLine();
-                var parts = line.Split(',');
+                // Copy uploaded file to a temp path
+                tempInput = FileUtilities.CreateTempFile(file);
 
-                var filtered = parts.Where((col, idx) => !unnamedIndices.Contains(idx));
-                cleanedLines.Add(string.Join(",", filtered));
+                // Read and clean: remove unnamed header columns and their data
+                string[] lines = File.ReadAllLines(tempInput);
+                if (lines.Length == 0)
+                    throw new InvalidOperationException("CSV is empty.");
+
+                var headers = lines[0].Split(',');
+                var cleanedLines = new List<string>(capacity: lines.Length)
+                {
+                    string.Join(",", headers.Where((h, i) => !string.IsNullOrWhiteSpace(h))),
+                };
+                for (int r = 1; r < lines.Length; r++)
+                {
+                    var row = lines[r] ?? string.Empty;
+                    var parts = row.Split(',');
+                    var filtered = parts.Where(
+                        (col, idx) =>
+                            idx < headers.Length && !string.IsNullOrWhiteSpace(headers[idx])
+                    );
+                    cleanedLines.Add(string.Join(",", filtered));
+                }
+
+                var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
+                return cleanedFile;
             }
-
-            return cleanedLines;
+            finally
+            {
+                FileUtilities.DeleteTempFile(tempInput);
+            }
         }
 
         private static IFormFile CreateIFormFileFromCleanedData(

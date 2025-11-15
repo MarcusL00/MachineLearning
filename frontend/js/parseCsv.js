@@ -24,6 +24,10 @@ function attachCsvListener() {
 
         // Populate both selects
         headers.forEach((header) => {
+          if (header === '') {
+            return // Skip empty headers
+          }
+
           const opt1 = document.createElement('option')
           opt1.value = header
           opt1.textContent = header

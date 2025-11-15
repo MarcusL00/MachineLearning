@@ -15,16 +15,17 @@ namespace CSVision.Services
         }
 
         // TODO: Change return so it also returns a graph
-        public async Task<ModelResult> GeneratePredictionsAsync(PredictionsRequestDto requestDto)
+        public ModelResult GeneratePredictionsAsync(PredictionsRequestDto requestDto)
         {
-            //var cleanedFile = _fileService.RemoveIdColumnAsync(requestDto.File);
+            var cleanedFile = _fileService.CleanseCsvFileAsync(requestDto.File);
             var machineLearningModel = MapToMachineLearningModel.MapToModel(
                 requestDto.MachineLearningModel,
                 requestDto.Features.ToArray(),
-                requestDto.Target
+                requestDto.Target,
+                requestDto.Seed
             );
 
-            ModelResult result = machineLearningModel.TrainModel(requestDto.File);
+            ModelResult result = machineLearningModel.TrainModel(cleanedFile);
 
             return result;
         }
