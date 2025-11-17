@@ -79,9 +79,39 @@ namespace CSVision.MachineLearningModels
             }
 
             // Evaluate
-            var transformedTest = baseTransformer.Transform(split.TestSet);
-            var predictions = trainerTransformer.Transform(transformedTest);
+            var transformedTrainData = baseTransformer.Transform(split.TrainSet);
+            var predictions = trainerTransformer.Transform(transformedTrainData);
             var metrics = EvaluateModel(mlContext, predictions);
+
+            // Extract prediction values - handle Key vs numeric Label types
+            double[] ActualValues;
+            double[] PredictedValues;
+
+            var schema = predictions.Schema;
+            bool isLabelKey = false;
+            for (int i = 0; i < schema.Count; i++)
+            {
+                if (schema[i].Name == "Label" && schema[i].Type is KeyDataViewType)
+                {
+                    isLabelKey = true;
+                    break;
+                }
+            }
+
+            if (isLabelKey)
+            {
+                // Multiclass: Label is Key type, use PredictedLabel for predicted class
+                var keyPreds = mlContext.Data.CreateEnumerable<MulticlassPredictionRow>(predictions, reuseRowObject: false).ToList();
+                ActualValues = keyPreds.Select(p => (double)p.Label).ToArray();
+                PredictedValues = keyPreds.Select(p => (double)p.PredictedLabel).ToArray();
+            }
+            else
+            {
+                // Regression/Binary: Label is numeric
+                var numPreds = mlContext.Data.CreateEnumerable<NumericPredictionRow>(predictions, reuseRowObject: false).ToList();
+                ActualValues = numPreds.Select(p => (double)p.Label).ToArray();
+                PredictedValues = numPreds.Select(p => (double)p.Score).ToArray();
+            }
 
             // Compose final model
             var model = baseTransformer.Append(trainerTransformer);
@@ -93,6 +123,8 @@ namespace CSVision.MachineLearningModels
                 ModelName = ModelName,
                 TrainedModel = model,
                 Metrics = metrics,
+                Actuals = ActualValues,
+                Predictions = PredictedValues
             };
         }
 
