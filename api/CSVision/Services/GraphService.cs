@@ -43,8 +43,8 @@ namespace CSVision.Services
             var reg = new ScottPlot.Statistics.LinearRegression(actualValues, predictedValues);
 
             // Plot regression line
-            var pt1 = new Coordinates(actualValues.First(), reg.GetValue(actualValues.First()));
-            var pt2 = new Coordinates(actualValues.Last(), reg.GetValue(actualValues.Last()));
+            var pt1 = new Coordinates(actualValues.Min(), reg.GetValue(actualValues.Min()));
+            var pt2 = new Coordinates(actualValues.Max(), reg.GetValue(actualValues.Max()));
             var line = myPlot.Add.Line(pt1, pt2);
             line.LineWidth = 2;
             line.LinePattern = LinePattern.Dashed;
