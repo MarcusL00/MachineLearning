@@ -80,6 +80,10 @@ p {
   font-size: 0.9rem;
 }
 
+img {
+  width: 100%;
+}
+
 #results-container:has(.htmx-indicator.htmx-request) {
   min-height: 95px;
   margin-top: 50px;
