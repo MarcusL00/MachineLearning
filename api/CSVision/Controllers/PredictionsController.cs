@@ -25,7 +25,7 @@ namespace CSVision.Controllers
         {
             ModelResult result = _predictionService.GeneratePredictionsAsync(requestDto);
 
-            byte[] graphImage = _graphService.GeneratePredictionGraph(result);
+            byte[] graphImage = _graphService.GenerateGraph(result);
 
             string html = HtmlUtilities.GenerateHtmlResponse(result, graphImage);
 

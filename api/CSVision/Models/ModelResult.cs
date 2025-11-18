@@ -9,5 +9,9 @@ namespace CSVision.Models
         public Dictionary<string, double> Metrics { get; set; } = new();
         public double[] Predictions { get; set; } = Array.Empty<double>(); // numeric values for plotting/HTML
         public double[] Actuals { get; set; } = Array.Empty<double>();
+        // Optional: numeric values for a selected continuous feature used to plot logistic regressions
+        public double[] FeatureValues { get; set; } = Array.Empty<double>();
+        // Name of the feature used for plotting (if any)
+        public string FeatureName { get; set; } = string.Empty;
     }
 }

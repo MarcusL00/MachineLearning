@@ -6,33 +6,35 @@ namespace CSVision.Services
 {
     public class GraphService : IGraphService
     {
-        public byte[] GeneratePredictionGraph(ModelResult result)
+        public byte[] GenerateGraph(ModelResult result)
         {
-            if (result.Actuals.Length == 0 || result.Predictions.Length == 0)
-            {
-                return CreateEmptyGraph();
-            }
+            // ModelName values from the concrete models currently include the word "Model" (e.g. "Logistic Regression Model").
+            // Be tolerant when matching so variations don't prevent graph generation.
+            var name = result?.ModelName ?? string.Empty;
+            var actuals = result?.Actuals ?? Array.Empty<double>();
+            var preds = result?.Predictions ?? Array.Empty<double>();
+           
 
-            // Detect if this is classification (discrete integer values) or regression (continuous)
-            bool isClassification = IsClassificationData(result.Actuals) && IsClassificationData(result.Predictions);
 
-            if (isClassification)
-            {
-                return GenerateConfusionMatrixGraph(result.Actuals, result.Predictions);
-            }
-            else
-            {
-                return GenerateRegressionGraph(result.Actuals, result.Predictions);
-            }
+            if (name.Contains("Linear Regression", StringComparison.OrdinalIgnoreCase))
+                return GenerateLinearRegressionGraph(actuals, preds);
+
+            if (name.Contains("Logistic Regression", StringComparison.OrdinalIgnoreCase))
+                return GenerateLogisticRegressionGraph(actuals, preds, result?.FeatureValues ?? Array.Empty<double>(), result?.FeatureName ?? string.Empty);
+
+            // Fallback: decide by data shape (classification vs regression)
+            if (IsClassificationData(actuals))
+                return GenerateConfusionMatrixGraph(actuals, preds);
+
+            return GenerateLinearRegressionGraph(actuals, preds);
         }
-
         private bool IsClassificationData(double[] values)
         {
             // Check if all values are integers (or very close to integers)
             return values.All(v => Math.Abs(v - Math.Round(v)) < 0.0001);
         }
 
-        private byte[] GenerateRegressionGraph(double[] actualValues, double[] predictedValues)
+        private byte[] GenerateLinearRegressionGraph(double[] actualValues, double[] predictedValues)
         {
             Plot myPlot = new();
             var sp = myPlot.Add.Scatter(actualValues, predictedValues);
@@ -53,6 +55,100 @@ namespace CSVision.Services
             myPlot.Title(reg.FormulaWithRSquared);
             return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
+        public byte[] GenerateLogisticRegressionGraph(
+            double[] actualValues,
+            double[] predictedValues,
+            double[] featureValues,
+            string featureName,
+            double intercept = 0,
+            Dictionary<string, double> coefficients = null,
+            Dictionary<string, double> fixedFeatureValues = null)
+        {
+            Plot myPlot = new();
+
+            // Choose X values: use feature values if valid, else fallback to indices
+            double[] xVals = (featureValues != null && featureValues.Length == predictedValues.Length && featureValues.Length > 0)
+                ? featureValues
+                : Enumerable.Range(0, predictedValues.Length).Select(i => (double)i).ToArray();
+
+            // Pair and sort by X so the curve looks smooth
+            var sorted = xVals.Select((x, i) => new { X = x, Y = predictedValues[i], Actual = actualValues.ElementAtOrDefault(i) })
+                .OrderBy(p => p.X)
+                .ToArray();
+
+            double[] sortedX = sorted.Select(p => p.X).ToArray();
+            double[] sortedY = sorted.Select(p => p.Y).ToArray();
+            double[] sortedActual = sorted.Select(p => p.Actual).ToArray();
+
+            // If coefficients are provided, generate smooth sigmoid curve
+            if (coefficients != null && coefficients.ContainsKey(featureName))
+            {
+                double minX = sortedX.Min();
+                double maxX = sortedX.Max();
+                double[] smoothX = Enumerable.Range(0, 100)
+                    .Select(i => minX + i * (maxX - minX) / 99.0)
+                    .ToArray();
+
+                // Hold other features constant
+                var otherFeatures = coefficients.Keys.Where(k => k != featureName);
+                var fixedValues = new Dictionary<string, double>();
+                foreach (var feat in otherFeatures)
+                {
+                    if (fixedFeatureValues != null && fixedFeatureValues.ContainsKey(feat))
+                        fixedValues[feat] = fixedFeatureValues[feat];
+                    else
+                        fixedValues[feat] = 0.0; // default fallback
+                }
+
+                // Compute sigmoid values
+                double[] smoothY = smoothX.Select(x =>
+                {
+                    double linear = intercept + coefficients[featureName] * x;
+                    foreach (var kvp in fixedValues)
+                        linear += coefficients[kvp.Key] * kvp.Value;
+                    return 1.0 / (1.0 + Math.Exp(-linear));
+                }).ToArray();
+
+                var curve = myPlot.Add.Scatter(smoothX, smoothY);
+                curve.LineWidth = 2;
+                curve.MarkerSize = 0;
+                curve.Color = ScottPlot.Color.FromHex("#1f77b4");
+                curve.LegendText = $"Sigmoid Curve ({featureName})";
+            }
+            else
+            {
+                // Fallback: plot raw predicted probabilities
+                var curve = myPlot.Add.Scatter(sortedX, sortedY);
+                curve.LineWidth = 2;
+                curve.MarkerSize = 0;
+                curve.Color = ScottPlot.Color.FromHex("#1f77b4");
+                curve.LegendText = string.IsNullOrWhiteSpace(featureName) ? "Sigmoid Curve" : $"Sigmoid Curve ({featureName})";
+            }
+
+            // Overlay actual binary labels as points
+            var actualPoints = myPlot.Add.Scatter(sortedX, sortedActual);
+            actualPoints.LineWidth = 0;
+            actualPoints.MarkerSize = 6;
+            actualPoints.MarkerShape = MarkerShape.FilledCircle;
+            actualPoints.Color = ScottPlot.Color.FromHex("#ff7f0e");
+            actualPoints.LegendText = "Actual Labels";
+
+            // Threshold line at 0.5
+            var threshold = myPlot.Add.HorizontalLine(0.5);
+            threshold.LineWidth = 2;
+            threshold.LinePattern = LinePattern.Dashed;
+            threshold.Color = ScottPlot.Color.FromHex("#2ca02c");
+
+            // Final plot styling
+            myPlot.Title("Logistic Regression Sigmoid");
+            myPlot.XLabel(string.IsNullOrWhiteSpace(featureName) ? "Index" : featureName);
+            myPlot.YLabel("Predicted Probability");
+            myPlot.ShowLegend();
+            myPlot.Axes.SetLimitsY(0, 1);
+
+            return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
+        }
+
 
         private byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues)
         {
@@ -92,6 +188,50 @@ namespace CSVision.Services
 
             return plt.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
+
+        //  public override byte[] GeneratePredictionGraph(double[] actualValues, double[] predictedValues)
+        // {
+        //     Plot myPlot = new();
+
+        //     // Sort by the chosen continuous feature (e.g. Age)
+        //     var sortedData = featureValues
+        //         .Select((x, i) => new { X = x, Y = predictedValues[i], Actual = actualValues[i] })
+        //         .OrderBy(p => p.X)
+        //         .ToArray();
+
+        //     double[] sortedX = sortedData.Select(p => p.X).ToArray();   // feature values
+        //     double[] sortedY = sortedData.Select(p => p.Y).ToArray();   // predicted probabilities
+        //     double[] sortedActual = sortedData.Select(p => p.Actual).ToArray();
+
+        //     // Plot the sigmoid curve (predicted probabilities vs feature)
+        //     var curve = myPlot.Add.Scatter(sortedX, sortedY);
+        //     curve.LineWidth = 2;
+        //     curve.MarkerSize = 0;
+        //     curve.Color = ScottPlot.Color.FromHex("#1f77b4");
+        //     curve.LegendText = "Sigmoid Curve";
+
+        //     // Overlay actual binary labels as points
+        //     var actualPoints = myPlot.Add.Scatter(sortedX, sortedActual);
+        //     actualPoints.LineWidth = 0;
+        //     actualPoints.MarkerSize = 6;
+        //     actualPoints.MarkerShape = MarkerShape.FilledCircle;
+        //     actualPoints.Color = ScottPlot.Color.FromHex("#ff7f0e");
+        //     actualPoints.LegendText = "Actual Labels";
+
+        //     // Threshold line at 0.5
+        //     var threshold = myPlot.Add.HorizontalLine(0.5);
+        //     threshold.LineWidth = 2;
+        //     threshold.LinePattern = LinePattern.Dashed;
+        //     threshold.Color = ScottPlot.Color.FromHex("#2ca02c");
+
+        //     myPlot.Title("Logistic Regression Sigmoid");
+        //     myPlot.XLabel("Feature (e.g. Age)");
+        //     myPlot.YLabel("Predicted Probability");
+        //     myPlot.ShowLegend();
+        //     myPlot.Axes.SetLimitsY(0, 1);
+
+        //     return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
+        // }
 
         private byte[] CreateEmptyGraph()
         {

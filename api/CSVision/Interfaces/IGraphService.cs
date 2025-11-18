@@ -4,6 +4,6 @@ namespace CSVision.Interfaces
 {
     public interface IGraphService
     {
-        byte[] GeneratePredictionGraph(ModelResult result);
+        byte[] GenerateGraph(ModelResult result);
     }
 }
