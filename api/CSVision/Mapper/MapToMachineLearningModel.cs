@@ -15,7 +15,6 @@ namespace CSVision.Mapper
             {
                 "LinearRegression" => new LinearRegressionModel(features, target, seed),
                 "LogisticRegression" => new LogisticRegressionModel(features, target, seed),
-                "DecisionTree" => new DecisionTreeModel(features, target, seed),
                 _ => throw new ArgumentException("Invalid model type", nameof(modelType)),
             };
         }

@@ -19,6 +19,8 @@ namespace CSVision.MachineLearningModels
             Seed = seed;
         }
 
+        public abstract byte[] GeneratePredictionGraph(double[] actualValues, double[] predictedValues);
+
         public abstract ModelResult TrainModel(IFormFile file);
 
         // Child classes must provide their trainer
@@ -89,12 +91,15 @@ namespace CSVision.MachineLearningModels
 
             var schema = predictions.Schema;
             bool isLabelKey = false;
+            bool isLabelBool = false;
             for (int i = 0; i < schema.Count; i++)
             {
-                if (schema[i].Name == "Label" && schema[i].Type is KeyDataViewType)
+                if (schema[i].Name == "Label")
                 {
-                    isLabelKey = true;
-                    break;
+                    if (schema[i].Type is KeyDataViewType)
+                        isLabelKey = true;
+                    else if (schema[i].Type == BooleanDataViewType.Instance)
+                        isLabelBool = true;
                 }
             }
 
@@ -104,6 +109,12 @@ namespace CSVision.MachineLearningModels
                 var keyPreds = mlContext.Data.CreateEnumerable<MulticlassPredictionRow>(predictions, reuseRowObject: false).ToList();
                 ActualValues = keyPreds.Select(p => (double)p.Label).ToArray();
                 PredictedValues = keyPreds.Select(p => (double)p.PredictedLabel).ToArray();
+            }
+            else if (isLabelBool)
+            {
+                var binPreds = mlContext.Data.CreateEnumerable<BinaryPredictionRow>(predictions, reuseRowObject: false).ToList();
+                ActualValues = binPreds.Select(p => p.Label ? 1.0 : 0.0).ToArray();
+                PredictedValues = binPreds.Select(p => (double)p.Score).ToArray();
             }
             else
             {
