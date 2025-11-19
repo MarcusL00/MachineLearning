@@ -14,7 +14,10 @@ namespace CSVision.Controllers
         private readonly IPredictionService _predictionService;
         private readonly IGraphService _graphService;
 
-        public PredictionsController(IPredictionService predictionService, IGraphService graphService)
+        public PredictionsController(
+            IPredictionService predictionService,
+            IGraphService graphService
+        )
         {
             _predictionService = predictionService;
             _graphService = graphService;
@@ -31,10 +34,17 @@ namespace CSVision.Controllers
 
             if (requestDto.ConfusionMatrix == true)
             {
-                confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(result.Actuals, result.Predictions);
+                confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(
+                    result.Actuals,
+                    result.Predictions
+                );
             }
 
-            string html = HtmlUtilities.GenerateHtmlResponse(result, graphImage, confusionMatrixImage);
+            string html = HtmlUtilities.GenerateSuccessfulHtmlResponse(
+                result,
+                graphImage,
+                confusionMatrixImage
+            );
 
             return Content(html, "text/html");
         }
