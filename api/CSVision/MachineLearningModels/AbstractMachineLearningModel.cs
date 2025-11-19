@@ -127,52 +127,7 @@ namespace CSVision.MachineLearningModels
             // Compose final model
             var model = baseTransformer.Append(trainerTransformer);
 
-            // Attempt to extract a continuous feature column to use for plotting logistic regressions.
-            double[] featureValues = Array.Empty<double>();
-            string featureNameForPlot = string.Empty;
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(tempCleaned) && File.Exists(tempCleaned))
-                {
-                    var lines = File.ReadAllLines(tempCleaned);
-                    if (lines.Length > 1)
-                    {
-                        var headers = lines[0].Split(',');
-
-                        // Prefer an explicitly provided feature (first in Features), otherwise pick the first non-target header
-                        string? chosen = null;
-                        if (Features != null && Features.Length > 0)
-                            chosen = Features[0];
-                        else
-                            chosen = headers.FirstOrDefault(h => !string.Equals(h, Target, StringComparison.OrdinalIgnoreCase));
-
-                        if (!string.IsNullOrWhiteSpace(chosen))
-                        {
-                            int idx = Array.FindIndex(headers, h => string.Equals(h, chosen, StringComparison.OrdinalIgnoreCase));
-                            if (idx >= 0)
-                            {
-                                var vals = new List<double>();
-                                for (int r = 1; r < lines.Length; r++)
-                                {
-                                    var parts = lines[r].Split(',');
-                                    if (parts.Length > idx && double.TryParse(parts[idx], out double v))
-                                        vals.Add(v);
-                                }
-
-                                if (vals.Count > 0)
-                                {
-                                    featureValues = vals.ToArray();
-                                    featureNameForPlot = chosen;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch
-            {
-                // Non-fatal: if feature extraction fails, leave featureValues empty and fall back to index-based plotting.
-            }
+        
 
             FileUtilities.DeleteTempFile(tempCleaned);
 
@@ -183,8 +138,6 @@ namespace CSVision.MachineLearningModels
                 Metrics = metrics,
                 Actuals = ActualValues,
                 Predictions = PredictedValues,
-                FeatureValues = featureValues,
-                FeatureName = featureNameForPlot
             };
         }
 
