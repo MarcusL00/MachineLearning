@@ -13,5 +13,9 @@ namespace CSVision.Models
         public double[] FeatureValues { get; set; } = Array.Empty<double>();
         // Name of the feature used for plotting (if any)
         public string FeatureName { get; set; } = string.Empty;
+        public double Coefficients
+        {
+            get; set;
+        } = 0;
     }
 }

@@ -13,14 +13,14 @@ namespace CSVision.Services
             var name = result?.ModelName ?? string.Empty;
             var actuals = result?.Actuals ?? Array.Empty<double>();
             var preds = result?.Predictions ?? Array.Empty<double>();
-           
 
+            result.Coefficients = 0.05;
 
             if (name.Contains("Linear Regression", StringComparison.OrdinalIgnoreCase))
                 return GenerateLinearRegressionGraph(actuals, preds);
 
             if (name.Contains("Logistic Regression", StringComparison.OrdinalIgnoreCase))
-                return GenerateLogisticRegressionGraph(actuals, preds, result?.FeatureValues ?? Array.Empty<double>(), result?.FeatureName ?? string.Empty);
+                return GenerateLogisticRegressionGraph(actuals, preds, result?.FeatureName ?? string.Empty);
 
             // Fallback: decide by data shape (classification vs regression)
             if (IsClassificationData(actuals))
@@ -58,21 +58,24 @@ namespace CSVision.Services
         public byte[] GenerateLogisticRegressionGraph(
             double[] actualValues,
             double[] predictedValues,
-            double[] featureValues,
-            string featureName,
-            double intercept = 0,
-            Dictionary<string, double> coefficients = null,
-            Dictionary<string, double> fixedFeatureValues = null)
+            string featureName)
         {
             Plot myPlot = new();
 
-            // Choose X values: use feature values if valid, else fallback to indices
-            double[] xVals = (featureValues != null && featureValues.Length == predictedValues.Length && featureValues.Length > 0)
-                ? featureValues
-                : Enumerable.Range(0, predictedValues.Length).Select(i => (double)i).ToArray();
+            // Clamp predictions to avoid NaN in logit transform
+            double Clamp(double p) => Math.Min(0.999999, Math.Max(0.000001, p));
+            double[] logits = predictedValues.Select(p => Math.Log(Clamp(p) / (1 - Clamp(p)))).ToArray();
 
-            // Pair and sort by X so the curve looks smooth
-            var sorted = xVals.Select((x, i) => new { X = x, Y = predictedValues[i], Actual = actualValues.ElementAtOrDefault(i) })
+            // Use index as independent variable
+            double[] indices = Enumerable.Range(0, predictedValues.Length).Select(i => (double)i).ToArray();
+
+            // Fit linear regression on logits vs. index
+            var reg = new ScottPlot.Statistics.LinearRegression(indices, logits);
+            double coefficients = reg.Slope;
+            double intercept = reg.Offset;
+
+            // Sort by index for smooth plotting
+            var sorted = indices.Select((x, i) => new { X = x, Y = predictedValues[i], Actual = actualValues.ElementAtOrDefault(i) })
                 .OrderBy(p => p.X)
                 .ToArray();
 
@@ -80,52 +83,24 @@ namespace CSVision.Services
             double[] sortedY = sorted.Select(p => p.Y).ToArray();
             double[] sortedActual = sorted.Select(p => p.Actual).ToArray();
 
-            // If coefficients are provided, generate smooth sigmoid curve
-            if (coefficients != null && coefficients.ContainsKey(featureName))
-            {
-                double minX = sortedX.Min();
-                double maxX = sortedX.Max();
-                double[] smoothX = Enumerable.Range(0, 100)
-                    .Select(i => minX + i * (maxX - minX) / 99.0)
-                    .ToArray();
+            // Generate smooth sigmoid curve
+            double minX = sortedX.Min();
+            double maxX = sortedX.Max();
+            double[] smoothX = Enumerable.Range(0, 100)
+                .Select(i => minX + i * (maxX - minX) / 99.0)
+                .ToArray();
 
-                // Hold other features constant
-                var otherFeatures = coefficients.Keys.Where(k => k != featureName);
-                var fixedValues = new Dictionary<string, double>();
-                foreach (var feat in otherFeatures)
-                {
-                    if (fixedFeatureValues != null && fixedFeatureValues.ContainsKey(feat))
-                        fixedValues[feat] = fixedFeatureValues[feat];
-                    else
-                        fixedValues[feat] = 0.0; // default fallback
-                }
+            double[] smoothY = smoothX.Select(x =>
+                1.0 / (1.0 + Math.Exp(-(intercept + coefficients * x)))
+            ).ToArray();
 
-                // Compute sigmoid values
-                double[] smoothY = smoothX.Select(x =>
-                {
-                    double linear = intercept + coefficients[featureName] * x;
-                    foreach (var kvp in fixedValues)
-                        linear += coefficients[kvp.Key] * kvp.Value;
-                    return 1.0 / (1.0 + Math.Exp(-linear));
-                }).ToArray();
+            var curve = myPlot.Add.Scatter(smoothX, smoothY);
+            curve.LineWidth = 2;
+            curve.MarkerSize = 0;
+            curve.Color = ScottPlot.Color.FromHex("#1f77b4");
+            curve.LegendText = $"Sigmoid Curve ({featureName})";
 
-                var curve = myPlot.Add.Scatter(smoothX, smoothY);
-                curve.LineWidth = 2;
-                curve.MarkerSize = 0;
-                curve.Color = ScottPlot.Color.FromHex("#1f77b4");
-                curve.LegendText = $"Sigmoid Curve ({featureName})";
-            }
-            else
-            {
-                // Fallback: plot raw predicted probabilities
-                var curve = myPlot.Add.Scatter(sortedX, sortedY);
-                curve.LineWidth = 2;
-                curve.MarkerSize = 0;
-                curve.Color = ScottPlot.Color.FromHex("#1f77b4");
-                curve.LegendText = string.IsNullOrWhiteSpace(featureName) ? "Sigmoid Curve" : $"Sigmoid Curve ({featureName})";
-            }
-
-            // Overlay actual binary labels as points
+            // Overlay actual binary labels
             var actualPoints = myPlot.Add.Scatter(sortedX, sortedActual);
             actualPoints.LineWidth = 0;
             actualPoints.MarkerSize = 6;
@@ -141,13 +116,14 @@ namespace CSVision.Services
 
             // Final plot styling
             myPlot.Title("Logistic Regression Sigmoid");
-            myPlot.XLabel(string.IsNullOrWhiteSpace(featureName) ? "Index" : featureName);
+            myPlot.XLabel(featureName);
             myPlot.YLabel("Predicted Probability");
             myPlot.ShowLegend();
             myPlot.Axes.SetLimitsY(0, 1);
 
             return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
+
 
 
         private byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues)
