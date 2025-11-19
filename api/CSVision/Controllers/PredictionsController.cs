@@ -27,7 +27,14 @@ namespace CSVision.Controllers
 
             byte[] graphImage = _graphService.GenerateGraph(result);
 
-            string html = HtmlUtilities.GenerateHtmlResponse(result, graphImage);
+            byte[] confusionMatrixImage = null;
+
+            if (requestDto.ConfusionMatrix == true)
+            {
+                confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(result.Actuals, result.Predictions);
+            }
+
+            string html = HtmlUtilities.GenerateHtmlResponse(result, graphImage, confusionMatrixImage);
 
             return Content(html, "text/html");
         }

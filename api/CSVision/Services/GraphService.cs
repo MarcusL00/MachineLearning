@@ -126,7 +126,7 @@ namespace CSVision.Services
 
 
 
-        private byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues)
+        public byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues)
         {
             var plt = new Plot();
 
