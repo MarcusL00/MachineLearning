@@ -52,5 +52,16 @@ namespace CSVision.Utilities
 
             return stringBuilder.ToString();
         }
+
+        public static string GenerateErrorHtmlResponse(string errorMessage)
+        {
+            return $@"
+            <html>
+                <body>
+                    <h2>Error</h2>
+                    <p>{errorMessage}</p>
+                </body>
+            </html>";
+        }
     }
 }

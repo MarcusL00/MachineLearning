@@ -6,6 +6,19 @@ namespace CSVision.Services
 {
     public sealed class FileService : IFileService
     {
+        public bool IsValidLength(IFormFile file, uint minimumLines)
+        {
+            using var reader = new StreamReader(file.OpenReadStream());
+            uint lineCount = 0;
+            while (reader.ReadLine() is not null)
+            {
+                lineCount++;
+                if (lineCount >= minimumLines)
+                    return true;
+            }
+            return false;
+        }
+
         public IFormFile CleanseCsvFileAsync(IFormFile file)
         {
             string tempInput = string.Empty;

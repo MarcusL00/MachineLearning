@@ -1,3 +1,4 @@
+using System.Data;
 using CSVision.DTOs;
 using CSVision.Interfaces;
 using CSVision.Mapper;
@@ -18,6 +19,11 @@ namespace CSVision.Services
         public ModelResult GeneratePredictionsAsync(PredictionsRequestDto requestDto)
         {
             var cleanedFile = _fileService.CleanseCsvFileAsync(requestDto.File);
+            if (!_fileService.IsValidLength(cleanedFile, 101))
+            {
+                throw new DataException("CSV file must contain at least two data rows.");
+            }
+
             var machineLearningModel = MapToMachineLearningModel.MapToModel(
                 requestDto.MachineLearningModel,
                 requestDto.Features.ToArray(),

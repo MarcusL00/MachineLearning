@@ -1,7 +1,7 @@
+using System.Data;
 using CSVision.DTOs;
 using CSVision.Interfaces;
 using CSVision.Models;
-using CSVision.Services;
 using CSVision.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +26,25 @@ namespace CSVision.Controllers
         [HttpPost]
         public IActionResult Predict(PredictionsRequestDto requestDto)
         {
-            ModelResult result = _predictionService.GeneratePredictionsAsync(requestDto);
+            ModelResult result = null;
+
+            try
+            {
+                result = _predictionService.GeneratePredictionsAsync(requestDto);
+            }
+            catch (DataException ex)
+            {
+                return Content(HtmlUtilities.GenerateErrorHtmlResponse(ex.Message), "text/html");
+            }
+            catch
+            {
+                return Content(
+                    HtmlUtilities.GenerateErrorHtmlResponse(
+                        "An error occurred while processing the prediction."
+                    ),
+                    "text/html"
+                );
+            }
 
             byte[] graphImage = _graphService.GenerateGraph(result);
 
