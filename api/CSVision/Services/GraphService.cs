@@ -24,7 +24,7 @@ namespace CSVision.Services
 
             // Fallback: decide by data shape (classification vs regression)
             if (IsClassificationData(actuals))
-                return GenerateConfusionMatrixGraph(actuals, preds);
+                return GenerateConfusionMatrixGraph(result);
 
             return GenerateLinearRegressionGraph(actuals, preds);
         }
@@ -124,9 +124,37 @@ namespace CSVision.Services
             return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
 
+        public byte[]? GenerateConfusionMatrixGraph(ModelResult ModelResult)
+        {
+            if (ModelResult.ConfusionMatrix == null)
+            {
+                return null;
+            }
 
+            var confusionMatrix = ModelResult.ConfusionMatrix;
 
-        public byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues)
+            // Convert to 2D array
+            var matrix = confusionMatrix.Counts;
+            int rows = matrix.Count;
+            int cols = matrix[0].Count;
+
+            double[,] data = new double[rows, cols];
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                    data[r, c] = matrix[r][c];
+
+            // Plot with ScottPlot
+            var plt = new Plot();
+            plt.Add.Heatmap(data);
+            plt.Title("Confusion Matrix");
+            plt.XLabel("Predicted");
+            plt.YLabel("Actual");
+
+            // Save to byte[]
+            return plt.GetImageBytes(600, 400, format: ImageFormat.Png);
+        }
+
+        public byte[] ConfusingMatrix(double[] actualValues, double[] predictedValues)
         {
             var plt = new Plot();
 

@@ -53,8 +53,7 @@ namespace CSVision.Controllers
             if (requestDto.ConfusionMatrix == true)
             {
                 confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(
-                    result.Actuals,
-                    result.Predictions
+                    result
                 );
             }
 

@@ -20,7 +20,7 @@ namespace CSVision.MachineLearningModels
             );
         }
 
-        protected override Dictionary<string, double> EvaluateModel(
+        protected override (Dictionary<string, double>, ConfusionMatrix? confusionMatrix) EvaluateModel(
             MLContext mlContext,
             IDataView predictions
         )
@@ -53,7 +53,7 @@ namespace CSVision.MachineLearningModels
                 results.Add("PRC", metrics.AreaUnderPrecisionRecallCurve);
             }
 
-            return results;
+            return (results, metrics.ConfusionMatrix);
         }
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
         {

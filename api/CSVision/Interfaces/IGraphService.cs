@@ -5,6 +5,6 @@ namespace CSVision.Interfaces
     public interface IGraphService
     {
         byte[] GenerateGraph(ModelResult result);
-        byte[] GenerateConfusionMatrixGraph(double[] actualValues, double[] predictedValues);
+        byte[] GenerateConfusionMatrixGraph(ModelResult result);
     }
 }

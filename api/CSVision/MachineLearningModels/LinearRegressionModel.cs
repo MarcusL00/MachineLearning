@@ -20,7 +20,7 @@ namespace CSVision.MachineLearningModels
             );
         }
 
-        protected override Dictionary<string, double> EvaluateModel(
+        protected override (Dictionary<string, double>, ConfusionMatrix? confusionMatrix) EvaluateModel(
             MLContext mlContext,
             IDataView predictions
         )
@@ -31,13 +31,13 @@ namespace CSVision.MachineLearningModels
                 scoreColumnName: "Score"
             );
 
-            return new Dictionary<string, double>
+            return (new Dictionary<string, double>
             {
                 { "RSquared", metrics.RSquared },
                 { "MeanAbsoluteError", metrics.MeanAbsoluteError },
                 { "MeanSquaredError", metrics.MeanSquaredError },
                 { "RootMeanSquaredError", metrics.RootMeanSquaredError },
-            };
+            }, null);
         }
 
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)

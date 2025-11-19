@@ -29,7 +29,7 @@ namespace CSVision.MachineLearningModels
         protected abstract IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext);
 
         // Child classes must provide their evaluator
-        protected abstract Dictionary<string, double> EvaluateModel(
+        protected abstract (Dictionary<string, double>, ConfusionMatrix? confusionMatrix) EvaluateModel(
             MLContext mlContext,
             IDataView predictions
         );
@@ -83,7 +83,7 @@ namespace CSVision.MachineLearningModels
             // Evaluate
             var transformedTrainData = baseTransformer.Transform(split.TrainSet);
             var predictions = trainerTransformer.Transform(transformedTrainData);
-            var metrics = EvaluateModel(mlContext, predictions);
+            var (metrics, confusionMatrix) = EvaluateModel(mlContext, predictions);
 
             // Extract prediction values - handle Key vs numeric Label types
             double[] ActualValues;
@@ -127,7 +127,7 @@ namespace CSVision.MachineLearningModels
             // Compose final model
             var model = baseTransformer.Append(trainerTransformer);
 
-        
+
 
             FileUtilities.DeleteTempFile(tempCleaned);
 
@@ -136,6 +136,7 @@ namespace CSVision.MachineLearningModels
                 ModelName = ModelName,
                 TrainedModel = model,
                 Metrics = metrics,
+                ConfusionMatrix = confusionMatrix,
                 Actuals = ActualValues,
                 Predictions = PredictedValues,
             };

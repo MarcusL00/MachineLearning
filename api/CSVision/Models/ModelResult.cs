@@ -1,4 +1,5 @@
 using Microsoft.ML;
+using Microsoft.ML.Data;
 
 namespace CSVision.Models
 {
@@ -13,6 +14,7 @@ namespace CSVision.Models
         public double[] FeatureValues { get; set; } = Array.Empty<double>();
         // Name of the feature used for plotting (if any)
         public string FeatureName { get; set; } = string.Empty;
+        public ConfusionMatrix? ConfusionMatrix { get; set; }
         public double Coefficients
         {
             get; set;
