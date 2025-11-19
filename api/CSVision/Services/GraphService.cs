@@ -142,7 +142,7 @@ namespace CSVision.Services
             for (int r = 0; r < rows; r++)
                 for (int c = 0; c < cols; c++)
                     data[r, c] = matrix[r][c];
-
+    
             // Plot with ScottPlot
             var plt = new Plot();
             plt.Add.Heatmap(data);
@@ -150,46 +150,24 @@ namespace CSVision.Services
             plt.XLabel("Predicted");
             plt.YLabel("Actual");
 
-            // Save to byte[]
-            return plt.GetImageBytes(600, 400, format: ImageFormat.Png);
-        }
-
-        public byte[] ConfusingMatrix(double[] actualValues, double[] predictedValues)
-        {
-            var plt = new Plot();
-
-            // Build confusion matrix
-            int numClasses = (int)Math.Max(actualValues.Max(), predictedValues.Max()) + 1;
-            double[,] confusionMatrix = new double[numClasses, numClasses];
-
-            for (int i = 0; i < actualValues.Length; i++)
+            for (int y = 0; y < data.GetLength(0); y++)
             {
-                int actual = (int)Math.Round(actualValues[i]);
-                int predicted = (int)Math.Round(predictedValues[i]);
-                if (actual >= 0 && actual < numClasses && predicted >= 0 && predicted < numClasses)
+                for (int x = 0; x < data.GetLength(1); x++)
                 {
-                    confusionMatrix[actual, predicted]++;
+                    double xCenter = x + 0.5;
+                    double yCenter = y + 0.5;
+
+                    string valueText = data[y, x].ToString("0");
+                    var text = plt.Add.Text(valueText, xCenter, yCenter);
+
+                    text.LabelFontSize = 12;
+                    text.Alignment = Alignment.MiddleCenter;
+                    text.LabelFontColor = Color.FromHex("#000000");
                 }
             }
-
-            // Create heatmap
-            var heatmap = plt.Add.Heatmap(confusionMatrix);
-            heatmap.Colormap = new ScottPlot.Colormaps.Viridis();
-
-            plt.Title($"Classification Confusion Matrix ({numClasses} classes)");
-            plt.XLabel("Predicted Class");
-            plt.YLabel("Actual Class");
-
-            // Add accuracy text
-            int correct = 0;
-            for (int i = 0; i < numClasses; i++)
-                correct += (int)confusionMatrix[i, i];
-            double accuracy = (double)correct / actualValues.Length * 100;
-
-            var text = plt.Add.Text($"Accuracy: {accuracy:F2}%", 0, numClasses + 0.5);
-            text.LabelFontSize = 14;
-            text.LabelBold = true;
-
+            //TODO: trying to figure out why the text isnt showing up, and i was thinking maybe it was the returned byte array conversion that did something too it but idk, committing this change to test
+            plt.SavePng("../confusion_matrix.png", 600, 400);
+            // Save to byte[]
             return plt.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
     }
