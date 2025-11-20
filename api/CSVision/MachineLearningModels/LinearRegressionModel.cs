@@ -23,9 +23,6 @@ namespace CSVision.MachineLearningModels
                 featureColumnName: "Features"
             );
         }
-
-
-
         /// <summary>
         /// Evaluates the model and returns regression metrics.
         /// </summary>

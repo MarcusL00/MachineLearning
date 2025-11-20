@@ -54,12 +54,18 @@ namespace CSVision.MachineLearningModels
 
             return (results, metrics.ConfusionMatrix);
         }
-
+        /// <summary>
+        /// Builds the label conversion for logistic regression.
+        /// </summary>
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
         {
             return mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Boolean);
         }
-
+        /// <summary>
+        /// Trains the logistic regression model using the provided CSV file.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         public override ModelResult TrainModel(IFormFile file) => TrainWithTemplate(file);
     }
 }

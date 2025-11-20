@@ -120,6 +120,20 @@ namespace CSVision.Services
             curve.MarkerSize = 0;
             curve.Color = ScottPlot.Color.FromHex("#1f77b4");
 
+                     // Threshold line at 0.5
+
+
+            var threshold = myPlot.Add.HorizontalLine(0.5);
+
+
+            threshold.LineWidth = 2;
+
+
+            threshold.LinePattern = LinePattern.Dashed;
+
+
+            threshold.Color = ScottPlot.Color.FromHex("#2ca02c");
+
             // Overlay actual binary labels
             var actualPoints = myPlot.Add.Scatter(sortedX, sortedActual);
             actualPoints.LineWidth = 0;
