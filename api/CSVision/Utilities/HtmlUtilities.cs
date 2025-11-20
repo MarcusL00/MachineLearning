@@ -35,7 +35,10 @@ namespace CSVision.Utilities
                     <img src='data:image/png;base64, {base64ConfusionMatrixImage}' alt='Confusion Matrix' />"
                 );
             }
-
+            stringBuilder.AppendLine(
+                @"
+                    <h3>Metrics</h3>"
+            );
             foreach (var metric in content.Metrics)
             {
                 stringBuilder.AppendLine(
