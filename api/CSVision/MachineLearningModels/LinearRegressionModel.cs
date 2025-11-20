@@ -55,16 +55,16 @@ namespace CSVision.MachineLearningModels
             );
         }
 
-        /// <summary>
-        /// Builds the label conversion for regression (to float).
-        /// </summary>
-        /// <param name="mlContext"></param>
-        /// <returns></returns>
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
         {
             return mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Single);
         }
 
+        /// <summary>
+        /// Trains the linear regression model using the provided CSV file.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         public override ModelResult TrainModel(IFormFile file) => TrainWithTemplate(file);
     }
 }
