@@ -5,6 +5,13 @@ namespace CSVision.Utilities
 {
     public static class HtmlUtilities
     {
+        /// <summary>
+        /// Generates an HTML response string for a successful model training, including the model metrics and images.
+        /// </summary>
+        /// <param name="content"></param>
+        /// <param name="graphImage"></param>
+        /// <param name="confusionMatrixImage"></param>
+        /// <returns></returns>
         public static string GenerateSuccessfulHtmlResponse(
             ModelResult content,
             byte[] graphImage,
@@ -56,6 +63,11 @@ namespace CSVision.Utilities
             return stringBuilder.ToString();
         }
 
+        /// <summary>
+        /// Generates an HTML response string for an error message.
+        /// </summary>
+        /// <param name="errorMessage"></param>
+        /// <returns></returns>
         public static string GenerateErrorHtmlResponse(string errorMessage)
         {
             return $@"

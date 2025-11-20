@@ -1,8 +1,10 @@
-using Microsoft.ML;
 using Microsoft.ML.Data;
 
 namespace CSVision.Models
 {
+    /// <summary>
+    /// Represents the result of a machine learning model training and evaluation.
+    /// </summary>
     public class ModelResult
     {
         public string ModelName { get; set; } = string.Empty;

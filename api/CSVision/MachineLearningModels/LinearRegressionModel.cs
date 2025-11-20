@@ -52,6 +52,11 @@ namespace CSVision.MachineLearningModels
             );
         }
 
+        /// <summary>
+        /// Builds the label conversion for regression (to float).
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <returns></returns>
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
         {
             return mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Single);

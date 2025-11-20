@@ -21,12 +21,10 @@ namespace CSVision.MachineLearningModels
 
         public abstract ModelResult TrainModel(IFormFile file);
 
-        // Child classes must provide their trainer
         protected abstract IEstimator<ITransformer> BuildTrainer(MLContext mlContext);
 
         protected abstract IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext);
 
-        // Child classes must provide their evaluator
         protected abstract (
             Dictionary<string, double>,
             ConfusionMatrix? confusionMatrix
@@ -69,17 +67,12 @@ namespace CSVision.MachineLearningModels
 
             // Inspect schema to determine Label type
             var schema = predictions.Schema;
-            bool isLabelKey = false;
             bool isLabelBool = false;
             for (int i = 0; i < schema.Count; i++)
             {
                 if (schema[i].Name == "Label")
                 {
-                    if (schema[i].Type is KeyDataViewType)
-                    {
-                        isLabelKey = true;
-                    }
-                    else if (schema[i].Type == BooleanDataViewType.Instance)
+                    if (schema[i].Type == BooleanDataViewType.Instance)
                     {
                         isLabelBool = true;
                     }
@@ -129,6 +122,10 @@ namespace CSVision.MachineLearningModels
             var transforms = new List<IEstimator<ITransformer>>();
             var featureColumns = new List<string>();
 
+            // Map the provided feature names to the schema in the IDataView so
+            // we know the runtime DataViewType for each column. If a feature
+            // name is not found in the IDataView schema we mark its type as
+            // null so it can be skipped later.
             IEnumerable<(string name, DataViewType? type)> columnsToProcess = Features
                 .Where(f => !string.Equals(f, targetColumn, StringComparison.OrdinalIgnoreCase))
                 .Select(f =>
@@ -146,18 +143,28 @@ namespace CSVision.MachineLearningModels
                     if (foundIdx >= 0)
                         return (name: f, type: dataView.Schema[foundIdx].Type);
 
+                    // Feature not present in schema
                     return (name: f, type: (DataViewType?)null);
                 });
 
+            // For each discovered feature, build an appropriate transform:
+            // - If the column is text, featurize it into a numeric vector.
+            // - Otherwise, convert the column to `float` (Single) so all
+            //   numeric features share the same dtype for concatenation.
+            // Each transform writes into a dedicated output column named
+            // `{originalName}_num`, which is collected into `featureColumns`.
             foreach (var (name, type) in columnsToProcess)
             {
                 var outputCol = name + "_num";
 
                 if (type == null)
+                    // Skip features that don't exist in the data schema
                     continue;
 
                 if (type.RawType == typeof(string) || type is TextDataViewType)
                 {
+                    // Text columns: produce a numeric feature vector using
+                    // ML.NET's text featurization (ngrams, TF/IDF, etc.).
                     transforms.Add(
                         mlContext.Transforms.Text.FeaturizeText(
                             outputColumnName: outputCol,
@@ -167,6 +174,8 @@ namespace CSVision.MachineLearningModels
                 }
                 else
                 {
+                    // Non-text columns: coerce to `Single` (float) so they
+                    // can be concatenated into a single `Features` vector.
                     transforms.Add(
                         mlContext.Transforms.Conversion.ConvertType(
                             outputColumnName: outputCol,
@@ -179,8 +188,11 @@ namespace CSVision.MachineLearningModels
                 featureColumns.Add(outputCol);
             }
 
+            // Concatenate all per-feature numeric outputs into the final
+            // `Features` column required by ML.NET trainers.
             transforms.Add(mlContext.Transforms.Concatenate("Features", featureColumns.ToArray()));
 
+            // Chain all transforms together into a single estimator and return it.
             return transforms.Aggregate((current, next) => current.Append(next));
         }
 
