@@ -19,8 +19,6 @@ namespace CSVision.MachineLearningModels
             Seed = seed;
         }
 
-        public abstract byte[] GeneratePredictionGraph(double[] actualValues, double[] predictedValues);
-
         public abstract ModelResult TrainModel(IFormFile file);
 
         // Child classes must provide their trainer
@@ -29,10 +27,10 @@ namespace CSVision.MachineLearningModels
         protected abstract IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext);
 
         // Child classes must provide their evaluator
-        protected abstract (Dictionary<string, double>, ConfusionMatrix? confusionMatrix) EvaluateModel(
-            MLContext mlContext,
-            IDataView predictions
-        );
+        protected abstract (
+            Dictionary<string, double>,
+            ConfusionMatrix? confusionMatrix
+        ) EvaluateModel(MLContext mlContext, IDataView predictions);
 
         /// <summary>
         /// Generic training template: handles pipeline, train/test split, fitting, evaluation.
@@ -53,36 +51,11 @@ namespace CSVision.MachineLearningModels
 
             // Train
             var trainerEstimator = BuildTrainer(mlContext);
-            ITransformer trainerTransformer;
-            try
-            {
-                trainerTransformer = trainerEstimator.Fit(transformedTrain);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Trainer.Fit exception: " + ex.Message);
-                try
-                {
-                    var preview = transformedTrain.Preview(maxRows: 10);
-                    Console.WriteLine("--- Transformed train preview ---");
-                    foreach (var col in preview.ColumnView)
-                    {
-                        Console.WriteLine(
-                            $"Column: {col.Column.Name} (Type: {col.Column.Type}) Values: {string.Join(",", col.Values.Select(v => v?.ToString() ?? "<null>"))}"
-                        );
-                    }
-                }
-                catch (Exception ex2)
-                {
-                    Console.WriteLine("Failed to preview transformed train: " + ex2.Message);
-                }
 
-                throw;
-            }
+            ITransformer trainerTransformer = trainerEstimator.Fit(transformedTrain);
 
             // Evaluate
-            var transformedTrainData = baseTransformer.Transform(split.TrainSet);
-            var predictions = trainerTransformer.Transform(transformedTrainData);
+            var predictions = trainerTransformer.Transform(transformedTrain);
             var (metrics, confusionMatrix) = EvaluateModel(mlContext, predictions);
 
             // Extract prediction values - handle Key vs numeric Label types
@@ -97,29 +70,42 @@ namespace CSVision.MachineLearningModels
                 if (schema[i].Name == "Label")
                 {
                     if (schema[i].Type is KeyDataViewType)
+                    {
                         isLabelKey = true;
+                    }
                     else if (schema[i].Type == BooleanDataViewType.Instance)
+                    {
                         isLabelBool = true;
+                    }
                 }
             }
 
             if (isLabelKey)
             {
                 // Multiclass: Label is Key type, use PredictedLabel for predicted class
-                var keyPreds = mlContext.Data.CreateEnumerable<MulticlassPredictionRow>(predictions, reuseRowObject: false).ToList();
+                var keyPreds = mlContext
+                    .Data.CreateEnumerable<MulticlassPredictionRow>(
+                        predictions,
+                        reuseRowObject: false
+                    )
+                    .ToList();
                 ActualValues = keyPreds.Select(p => (double)p.Label).ToArray();
                 PredictedValues = keyPreds.Select(p => (double)p.PredictedLabel).ToArray();
             }
             else if (isLabelBool)
             {
-                var binPreds = mlContext.Data.CreateEnumerable<BinaryPredictionRow>(predictions, reuseRowObject: false).ToList();
+                var binPreds = mlContext
+                    .Data.CreateEnumerable<BinaryPredictionRow>(predictions, reuseRowObject: false)
+                    .ToList();
                 ActualValues = binPreds.Select(p => p.Label ? 1.0 : 0.0).ToArray();
                 PredictedValues = binPreds.Select(p => (double)p.Score).ToArray();
             }
             else
             {
                 // Regression/Binary: Label is numeric
-                var numPreds = mlContext.Data.CreateEnumerable<NumericPredictionRow>(predictions, reuseRowObject: false).ToList();
+                var numPreds = mlContext
+                    .Data.CreateEnumerable<NumericPredictionRow>(predictions, reuseRowObject: false)
+                    .ToList();
                 ActualValues = numPreds.Select(p => (double)p.Label).ToArray();
                 PredictedValues = numPreds.Select(p => (double)p.Score).ToArray();
             }
@@ -127,18 +113,15 @@ namespace CSVision.MachineLearningModels
             // Compose final model
             var model = baseTransformer.Append(trainerTransformer);
 
-
-
             FileUtilities.DeleteTempFile(tempCleaned);
 
             return new ModelResult
             {
                 ModelName = ModelName,
-                TrainedModel = model,
                 Metrics = metrics,
                 ConfusionMatrix = confusionMatrix,
-                Actuals = ActualValues,
-                Predictions = PredictedValues,
+                ActualValues = ActualValues,
+                PredictionValues = PredictedValues,
             };
         }
 
@@ -216,7 +199,7 @@ namespace CSVision.MachineLearningModels
             return transforms.Aggregate((current, next) => current.Append(next));
         }
 
-        private protected IDataView CreateDataViewFromCsvFile(
+        private protected static IDataView CreateDataViewFromCsvFile(
             IFormFile file,
             out string tempCleaned
         )

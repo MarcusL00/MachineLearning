@@ -16,12 +16,14 @@ namespace CSVision.Services
         }
 
         // TODO: Change return so it also returns a graph
-        public ModelResult GeneratePredictionsAsync(PredictionsRequestDto requestDto)
+        public ModelResult GeneratePredictions(PredictionsRequestDto requestDto)
         {
-            var cleanedFile = _fileService.CleanseCsvFileAsync(requestDto.File);
-            if (!_fileService.IsValidLength(cleanedFile, 101))
+            var cleanedFile = _fileService.CleanseCsvFile(requestDto.File);
+
+            uint minimumLines = 101; // 100 data rows + 1 header row
+            if (!_fileService.IsValidLength(cleanedFile, minimumLines))
             {
-                throw new DataException("CSV file must contain at least two data rows.");
+                throw new DataException($"CSV file must contain at least {minimumLines} rows.");
             }
 
             var machineLearningModel = MapToMachineLearningModel.MapToModel(

@@ -19,7 +19,7 @@ namespace CSVision.Services
             return false;
         }
 
-        public IFormFile CleanseCsvFileAsync(IFormFile file)
+        public IFormFile CleanseCsvFile(IFormFile file)
         {
             string tempInput = string.Empty;
 

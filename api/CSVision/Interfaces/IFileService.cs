@@ -2,7 +2,7 @@ namespace CSVision.Interfaces
 {
     public interface IFileService
     {
-        IFormFile CleanseCsvFileAsync(IFormFile file);
+        IFormFile CleanseCsvFile(IFormFile file);
         bool IsValidLength(IFormFile file, uint minimumLines);
     }
 }

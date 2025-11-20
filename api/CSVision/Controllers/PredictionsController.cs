@@ -30,7 +30,7 @@ namespace CSVision.Controllers
 
             try
             {
-                result = _predictionService.GeneratePredictionsAsync(requestDto);
+                result = _predictionService.GeneratePredictions(requestDto);
             }
             catch (DataException ex)
             {
@@ -52,9 +52,7 @@ namespace CSVision.Controllers
 
             if (requestDto.ConfusionMatrix == true)
             {
-                confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(
-                    result
-                );
+                confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(result);
             }
 
             string html = HtmlUtilities.GenerateSuccessfulHtmlResponse(

@@ -5,6 +5,6 @@ namespace CSVision.Interfaces
 {
     public interface IPredictionService
     {
-        ModelResult GeneratePredictionsAsync(PredictionsRequestDto requestDto);
+        ModelResult GeneratePredictions(PredictionsRequestDto requestDto);
     }
 }

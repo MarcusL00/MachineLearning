@@ -1,6 +1,6 @@
-using ScottPlot;
 using CSVision.Interfaces;
 using CSVision.Models;
+using ScottPlot;
 
 namespace CSVision.Services
 {
@@ -11,16 +11,14 @@ namespace CSVision.Services
             // ModelName values from the concrete models currently include the word "Model" (e.g. "Logistic Regression Model").
             // Be tolerant when matching so variations don't prevent graph generation.
             var name = result?.ModelName ?? string.Empty;
-            var actuals = result?.Actuals ?? Array.Empty<double>();
-            var preds = result?.Predictions ?? Array.Empty<double>();
-
-            result.Coefficients = 0.05;
+            var actuals = result?.ActualValues ?? Array.Empty<double>();
+            var preds = result?.PredictionValues ?? Array.Empty<double>();
 
             if (name.Contains("Linear Regression", StringComparison.OrdinalIgnoreCase))
                 return GenerateLinearRegressionGraph(actuals, preds);
 
             if (name.Contains("Logistic Regression", StringComparison.OrdinalIgnoreCase))
-                return GenerateLogisticRegressionGraph(actuals, preds, result?.FeatureName ?? string.Empty);
+                return GenerateLogisticRegressionGraph(actuals, preds);
 
             // Fallback: decide by data shape (classification vs regression)
             if (IsClassificationData(actuals))
@@ -28,13 +26,17 @@ namespace CSVision.Services
 
             return GenerateLinearRegressionGraph(actuals, preds);
         }
+
         private bool IsClassificationData(double[] values)
         {
             // Check if all values are integers (or very close to integers)
             return values.All(v => Math.Abs(v - Math.Round(v)) < 0.0001);
         }
 
-        private byte[] GenerateLinearRegressionGraph(double[] actualValues, double[] predictedValues)
+        private byte[] GenerateLinearRegressionGraph(
+            double[] actualValues,
+            double[] predictedValues
+        )
         {
             Plot myPlot = new();
             var sp = myPlot.Add.Scatter(actualValues, predictedValues);
@@ -55,19 +57,25 @@ namespace CSVision.Services
             myPlot.Title(reg.FormulaWithRSquared);
             return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
+
         public byte[] GenerateLogisticRegressionGraph(
             double[] actualValues,
-            double[] predictedValues,
-            string featureName)
+            double[] predictedValues
+        )
         {
             Plot myPlot = new();
 
             // Clamp predictions to avoid NaN in logit transform
             double Clamp(double p) => Math.Min(0.999999, Math.Max(0.000001, p));
-            double[] logits = predictedValues.Select(p => Math.Log(Clamp(p) / (1 - Clamp(p)))).ToArray();
+            double[] logits = predictedValues
+                .Select(p => Math.Log(Clamp(p) / (1 - Clamp(p))))
+                .ToArray();
 
             // Use index as independent variable
-            double[] indices = Enumerable.Range(0, predictedValues.Length).Select(i => (double)i).ToArray();
+            double[] indices = Enumerable
+                .Range(0, predictedValues.Length)
+                .Select(i => (double)i)
+                .ToArray();
 
             // Fit linear regression on logits vs. index
             var reg = new ScottPlot.Statistics.LinearRegression(indices, logits);
@@ -75,7 +83,16 @@ namespace CSVision.Services
             double intercept = reg.Offset;
 
             // Sort by index for smooth plotting
-            var sorted = indices.Select((x, i) => new { X = x, Y = predictedValues[i], Actual = actualValues.ElementAtOrDefault(i) })
+            var sorted = indices
+                .Select(
+                    (x, i) =>
+                        new
+                        {
+                            X = x,
+                            Y = predictedValues[i],
+                            Actual = actualValues.ElementAtOrDefault(i),
+                        }
+                )
                 .OrderBy(p => p.X)
                 .ToArray();
 
@@ -86,19 +103,19 @@ namespace CSVision.Services
             // Generate smooth sigmoid curve
             double minX = sortedX.Min();
             double maxX = sortedX.Max();
-            double[] smoothX = Enumerable.Range(0, 100)
+            double[] smoothX = Enumerable
+                .Range(0, 100)
                 .Select(i => minX + i * (maxX - minX) / 99.0)
                 .ToArray();
 
-            double[] smoothY = smoothX.Select(x =>
-                1.0 / (1.0 + Math.Exp(-(intercept + coefficients * x)))
-            ).ToArray();
+            double[] smoothY = smoothX
+                .Select(x => 1.0 / (1.0 + Math.Exp(-(intercept + coefficients * x))))
+                .ToArray();
 
             var curve = myPlot.Add.Scatter(smoothX, smoothY);
             curve.LineWidth = 2;
             curve.MarkerSize = 0;
             curve.Color = ScottPlot.Color.FromHex("#1f77b4");
-            curve.LegendText = $"Sigmoid Curve ({featureName})";
 
             // Overlay actual binary labels
             var actualPoints = myPlot.Add.Scatter(sortedX, sortedActual);
@@ -116,7 +133,6 @@ namespace CSVision.Services
 
             // Final plot styling
             myPlot.Title("Logistic Regression Sigmoid");
-            myPlot.XLabel(featureName);
             myPlot.YLabel("Predicted Probability");
             myPlot.ShowLegend();
             myPlot.Axes.SetLimitsY(0, 1);
@@ -140,9 +156,9 @@ namespace CSVision.Services
 
             double[,] data = new double[rows, cols];
             for (int r = 0; r < rows; r++)
-                for (int c = 0; c < cols; c++)
-                    data[r, c] = matrix[r][c];
-    
+            for (int c = 0; c < cols; c++)
+                data[r, c] = matrix[r][c];
+
             // Plot with ScottPlot
             var plt = new Plot();
             plt.Add.Heatmap(data);
