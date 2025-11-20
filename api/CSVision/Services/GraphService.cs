@@ -14,6 +14,7 @@ namespace CSVision.Services
             var actuals = result?.ActualValues ?? Array.Empty<double>();
             var preds = result?.PredictionValues ?? Array.Empty<double>();
 
+            // Decide graph type based on model name
             if (name.Contains("Linear Regression", StringComparison.OrdinalIgnoreCase))
                 return GenerateLinearRegressionGraph(actuals, preds);
 
@@ -38,6 +39,7 @@ namespace CSVision.Services
             double[] predictedValues
         )
         {
+            // Create scatter plot
             Plot myPlot = new();
             var sp = myPlot.Add.Scatter(actualValues, predictedValues);
             sp.LineWidth = 0;
@@ -96,6 +98,7 @@ namespace CSVision.Services
                 .OrderBy(p => p.X)
                 .ToArray();
 
+            // Extract sorted arrays
             double[] sortedX = sorted.Select(p => p.X).ToArray();
             double[] sortedY = sorted.Select(p => p.Y).ToArray();
             double[] sortedActual = sorted.Select(p => p.Actual).ToArray();
@@ -107,7 +110,7 @@ namespace CSVision.Services
                 .Range(0, 100)
                 .Select(i => minX + i * (maxX - minX) / 99.0)
                 .ToArray();
-
+            // Generate corresponding Y values using logistic function
             double[] smoothY = smoothX
                 .Select(x => 1.0 / (1.0 + Math.Exp(-(intercept + coefficients * x))))
                 .ToArray();
@@ -125,21 +128,14 @@ namespace CSVision.Services
             actualPoints.Color = ScottPlot.Color.FromHex("#ff7f0e");
             actualPoints.LegendText = "Actual Labels";
 
-            // Threshold line at 0.5
-            var threshold = myPlot.Add.HorizontalLine(0.5);
-            threshold.LineWidth = 2;
-            threshold.LinePattern = LinePattern.Dashed;
-            threshold.Color = ScottPlot.Color.FromHex("#2ca02c");
-
-            // Final plot styling
-            myPlot.Title("Logistic Regression Sigmoid");
-            myPlot.YLabel("Predicted Probability");
-            myPlot.ShowLegend();
-            myPlot.Axes.SetLimitsY(0, 1);
-
             return myPlot.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
 
+        /// <summary>
+        /// Generates a confusion matrix heatmap graph from the given ModelResult.
+        /// </summary>
+        /// <param name="ModelResult">The ModelResult containing the ConfusionMatrix.</param
+        /// </summary>
         public byte[]? GenerateConfusionMatrixGraph(ModelResult ModelResult)
         {
             if (ModelResult.ConfusionMatrix == null)
@@ -162,28 +158,6 @@ namespace CSVision.Services
             // Plot with ScottPlot
             var plt = new Plot();
             plt.Add.Heatmap(data);
-            plt.Title("Confusion Matrix");
-            plt.XLabel("Predicted");
-            plt.YLabel("Actual");
-
-            for (int y = 0; y < data.GetLength(0); y++)
-            {
-                for (int x = 0; x < data.GetLength(1); x++)
-                {
-                    double xCenter = x + 0.5;
-                    double yCenter = y + 0.5;
-
-                    string valueText = data[y, x].ToString("0");
-                    var text = plt.Add.Text(valueText, xCenter, yCenter);
-
-                    text.LabelFontSize = 12;
-                    text.Alignment = Alignment.MiddleCenter;
-                    text.LabelFontColor = Color.FromHex("#000000");
-                }
-            }
-            //TODO: trying to figure out why the text isnt showing up, and i was thinking maybe it was the returned byte array conversion that did something too it but idk, committing this change to test
-            plt.SavePng("../confusion_matrix.png", 600, 400);
-            // Save to byte[]
             return plt.GetImageBytes(600, 400, format: ImageFormat.Png);
         }
     }
