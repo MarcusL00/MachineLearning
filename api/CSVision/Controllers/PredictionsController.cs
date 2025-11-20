@@ -30,14 +30,17 @@ namespace CSVision.Controllers
 
             try
             {
+                // Generate predictions using the prediction service
                 result = _predictionService.GeneratePredictions(requestDto);
             }
             catch (DataException ex)
             {
+                // Handle csv row data-related exceptions and return an error HTML response
                 return Content(HtmlUtilities.GenerateErrorHtmlResponse(ex.Message), "text/html");
             }
             catch
             {
+                // Handle any other exceptions and return a generic error HTML response
                 return Content(
                     HtmlUtilities.GenerateErrorHtmlResponse(
                         "An error occurred while processing the prediction."
@@ -46,15 +49,18 @@ namespace CSVision.Controllers
                 );
             }
 
+            // Generate graphs using the graph service
             byte[] graphImage = _graphService.GenerateGraph(result);
 
             byte[]? confusionMatrixImage = null;
 
+            // Generate confusion matrix graph if requested
             if (requestDto.ConfusionMatrix == true)
             {
                 confusionMatrixImage = _graphService.GenerateConfusionMatrixGraph(result);
             }
 
+            // Generate the final HTML response and return it
             string html = HtmlUtilities.GenerateSuccessfulHtmlResponse(
                 result,
                 graphImage,
