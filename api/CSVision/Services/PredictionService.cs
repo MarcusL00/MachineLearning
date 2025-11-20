@@ -15,7 +15,6 @@ namespace CSVision.Services
             _fileService = fileService;
         }
 
-        // TODO: Change return so it also returns a graph
         public ModelResult GeneratePredictions(PredictionsRequestDto requestDto)
         {
             var cleanedFile = _fileService.CleanseCsvFile(requestDto.File);
@@ -26,6 +25,7 @@ namespace CSVision.Services
                 throw new DataException($"CSV file must contain at least {minimumLines} rows.");
             }
 
+            // Map DTO to machine learning model
             var machineLearningModel = MapToMachineLearningModel.MapToModel(
                 requestDto.MachineLearningModel,
                 requestDto.Features.ToArray(),
