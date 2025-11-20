@@ -11,6 +11,11 @@ namespace CSVision.MachineLearningModels
         internal LinearRegressionModel(string[] features, string target, int seed)
             : base(features, target, seed) { }
 
+        /// <summary>
+        /// Builds the trainer for linear regression using SDCA algorithm.
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <returns></returns>
         protected override IEstimator<ITransformer> BuildTrainer(MLContext mlContext)
         {
             return mlContext.Regression.Trainers.Sdca(
@@ -19,6 +24,14 @@ namespace CSVision.MachineLearningModels
             );
         }
 
+
+
+        /// <summary>
+        /// Evaluates the model and returns regression metrics.
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <param name="predictions"></param>
+        /// <returns></returns>
         protected override (
             Dictionary<string, double>,
             ConfusionMatrix? confusionMatrix
@@ -42,6 +55,11 @@ namespace CSVision.MachineLearningModels
             );
         }
 
+        /// <summary>
+        /// Builds the label conversion for regression (to float).
+        /// </summary>
+        /// <param name="mlContext"></param>
+        /// <returns></returns>
         protected override IEstimator<ITransformer> BuildLabelConversion(MLContext mlContext)
         {
             return mlContext.Transforms.Conversion.ConvertType("Label", Target, DataKind.Single);
