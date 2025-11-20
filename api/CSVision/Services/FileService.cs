@@ -6,6 +6,12 @@ namespace CSVision.Services
 {
     public sealed class FileService : IFileService
     {
+        /// <summary>
+        /// Checks if the provided CSV file has at least the specified minimum number of lines.
+        /// </summary>
+        /// <param name="file"></param>
+        /// <param name="minimumLines"></param>
+        /// <returns></returns>
         public bool IsValidLength(IFormFile file, uint minimumLines)
         {
             using var reader = new StreamReader(file.OpenReadStream());
@@ -21,23 +27,28 @@ namespace CSVision.Services
 
         public IFormFile CleanseCsvFile(IFormFile file)
         {
-            string tempInput = string.Empty;
+            string tempCsvDataFilePath = string.Empty;
 
             try
             {
-                // Copy uploaded file to a temp path
-                tempInput = FileUtilities.CreateTempFile(file);
+                // Copy uploaded file to a temp path and get the file path
+                tempCsvDataFilePath = FileUtilities.CreateTempFile(file);
 
                 // Read and clean: remove unnamed header columns and their data
-                string[] lines = File.ReadAllLines(tempInput);
+                string[] lines = File.ReadAllLines(tempCsvDataFilePath);
+
+                // Ensure there is at least one line (header)
                 if (lines.Length == 0)
                     throw new InvalidOperationException("CSV is empty.");
 
+                // Identify named headers and filter out unnamed columns
                 var headers = lines[0].Split(',');
                 var cleanedLines = new List<string>(capacity: lines.Length)
                 {
                     string.Join(",", headers.Where((h, i) => !string.IsNullOrWhiteSpace(h))),
                 };
+
+                // Filter out unnamed columns from each data row
                 for (int r = 1; r < lines.Length; r++)
                 {
                     var row = lines[r] ?? string.Empty;
@@ -49,12 +60,14 @@ namespace CSVision.Services
                     cleanedLines.Add(string.Join(",", filtered));
                 }
 
+                // Create a new IFormFile from the cleaned data
                 var cleanedFile = CreateIFormFileFromCleanedData(file, cleanedLines);
                 return cleanedFile;
             }
             finally
             {
-                FileUtilities.DeleteTempFile(tempInput);
+                // Delete the temporary data file
+                FileUtilities.DeleteTempFile(tempCsvDataFilePath);
             }
         }
 
@@ -63,9 +76,11 @@ namespace CSVision.Services
             List<string> cleanedLines
         )
         {
+            // Convert cleaned lines back to a single CSV string
             var cleanedCsv = string.Join(Environment.NewLine, cleanedLines);
             var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(cleanedCsv));
 
+            // Create a new IFormFile with the cleaned data
             var cleanedFile = new FormFile(
                 memoryStream,
                 0,

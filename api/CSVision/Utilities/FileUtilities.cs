@@ -4,7 +4,7 @@ namespace CSVision.Utilities
     {
         internal static string CreateTempFile(IFormFile file)
         {
-            var tempFileName = Path.GetTempFileName();
+            string tempFileName = Path.GetTempFileName();
             using (
                 var inputFileStream = new FileStream(
                     tempFileName,

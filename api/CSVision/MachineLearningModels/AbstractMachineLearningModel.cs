@@ -33,12 +33,15 @@ namespace CSVision.MachineLearningModels
         ) EvaluateModel(MLContext mlContext, IDataView predictions);
 
         /// <summary>
-        /// Generic training template: handles pipeline, train/test split, fitting, evaluation.
+        /// Template method for training a model with reusable steps.
         /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
         private protected ModelResult TrainWithTemplate(IFormFile file)
         {
+            // Initialize MLContext and load data
             var mlContext = Seed == -1 ? new MLContext() : new MLContext(Seed);
-            var dataView = CreateDataViewFromCsvFile(file, out string tempCleaned);
+            var dataView = CreateDataViewFromCsvFile(file, mlContext, out string tempCleaned);
 
             var split = mlContext.Data.TrainTestSplit(dataView, testFraction: 0.2);
 
@@ -201,24 +204,23 @@ namespace CSVision.MachineLearningModels
 
         private protected static IDataView CreateDataViewFromCsvFile(
             IFormFile file,
+            MLContext mlContext,
             out string tempCleaned
         )
         {
-            var mlContext = new MLContext();
-
             tempCleaned = FileUtilities.CreateTempFile(file);
             string[] lines = File.ReadAllLines(tempCleaned);
 
             var cleanedHeader = lines[0];
-            var cleanedHeaders = cleanedHeader.Split(',');
+            var dividedHeaders = cleanedHeader.Split(',');
             var sampleRows = lines.Skip(1).Take(10).Select(l => l.Split(',')).ToList();
 
             var columns = new List<TextLoader.Column>();
-            for (int i = 0; i < cleanedHeaders.Length; i++)
+            for (int i = 0; i < dividedHeaders.Length; i++)
             {
-                string name = string.IsNullOrWhiteSpace(cleanedHeaders[i])
+                string name = string.IsNullOrWhiteSpace(dividedHeaders[i])
                     ? $"Column{i}"
-                    : cleanedHeaders[i];
+                    : dividedHeaders[i];
 
                 bool isNumeric = sampleRows
                     .Select(r => r.Length > i ? r[i] : null)

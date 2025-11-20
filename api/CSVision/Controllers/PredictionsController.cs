@@ -26,7 +26,7 @@ namespace CSVision.Controllers
         [HttpPost]
         public IActionResult Predict(PredictionsRequestDto requestDto)
         {
-            ModelResult result = null;
+            ModelResult result;
 
             try
             {
@@ -48,7 +48,7 @@ namespace CSVision.Controllers
 
             byte[] graphImage = _graphService.GenerateGraph(result);
 
-            byte[] confusionMatrixImage = null;
+            byte[]? confusionMatrixImage = null;
 
             if (requestDto.ConfusionMatrix == true)
             {
